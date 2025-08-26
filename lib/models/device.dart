@@ -1,3 +1,5 @@
+import 'package:flutter/material.dart';
+
 class Device {
   int? id;
   String deviceType;
@@ -159,5 +161,493 @@ class WastewaterMonitoringData {
     if (percentage >= 80) return 'Tốt';
     if (percentage >= 60) return 'Trung bình';
     return 'Kém';
+  }
+}
+
+// Model cho sensor mực nước
+class WaterLevelSensor {
+  final int? id;
+  final String deviceSerial;
+  final String deviceName;
+  final double waterLevel; // Mực nước (cm)
+  final double maxCapacity; // Dung tích tối đa (cm)
+  final double minThreshold; // Ngưỡng cảnh báo thấp (cm)
+  final double maxThreshold; // Ngưỡng cảnh báo cao (cm)
+  final DateTime lastUpdate;
+  final bool isActive;
+  final int? parentDeviceId;
+
+  WaterLevelSensor({
+    this.id,
+    required this.deviceSerial,
+    required this.deviceName,
+    required this.waterLevel,
+    required this.maxCapacity,
+    required this.minThreshold,
+    required this.maxThreshold,
+    required this.lastUpdate,
+    required this.isActive,
+    this.parentDeviceId,
+  });
+
+  // Tạo sensor mực nước mặc định
+  factory WaterLevelSensor.createDefault(String serial, String name, {int? parentDeviceId}) {
+    return WaterLevelSensor(
+      deviceSerial: serial,
+      deviceName: name,
+      waterLevel: 0.0,
+      maxCapacity: 100.0,
+      minThreshold: 10.0,
+      maxThreshold: 90.0,
+      lastUpdate: DateTime.now(),
+      isActive: true,
+      parentDeviceId: parentDeviceId,
+    );
+  }
+
+  // Getter cho mực nước hiện tại
+  double get currentWaterLevel => waterLevel;
+
+  // Getter cho serial
+  String get serial => deviceSerial;
+
+  // Getter cho name
+  String get name => deviceName;
+
+  // Tính phần trăm mực nước
+  double get waterLevelPercentage {
+    return (waterLevel / maxCapacity) * 100;
+  }
+
+  // Kiểm tra trạng thái cảnh báo
+  String get alertStatus {
+    if (waterLevel <= minThreshold) return 'Thấp';
+    if (waterLevel >= maxThreshold) return 'Cao';
+    return 'Bình thường';
+  }
+
+  // Màu sắc dựa trên mực nước
+  Color get waterLevelColor {
+    if (waterLevel <= minThreshold) return Colors.red;
+    if (waterLevel >= maxThreshold) return Colors.orange;
+    return Colors.green;
+  }
+
+  // Cập nhật mực nước
+  WaterLevelSensor updateWaterLevel(double newWaterLevel) {
+    return WaterLevelSensor(
+      id: id,
+      deviceSerial: deviceSerial,
+      deviceName: deviceName,
+      waterLevel: newWaterLevel,
+      maxCapacity: maxCapacity,
+      minThreshold: minThreshold,
+      maxThreshold: maxThreshold,
+      lastUpdate: DateTime.now(),
+      isActive: isActive,
+      parentDeviceId: parentDeviceId,
+    );
+  }
+
+  // Copy with method
+  WaterLevelSensor copyWith({
+    int? id,
+    String? deviceSerial,
+    String? deviceName,
+    double? waterLevel,
+    double? maxCapacity,
+    double? minThreshold,
+    double? maxThreshold,
+    DateTime? lastUpdate,
+    bool? isActive,
+    int? parentDeviceId,
+  }) {
+    return WaterLevelSensor(
+      id: id ?? this.id,
+      deviceSerial: deviceSerial ?? this.deviceSerial,
+      deviceName: deviceName ?? this.deviceName,
+      waterLevel: waterLevel ?? this.waterLevel,
+      maxCapacity: maxCapacity ?? this.maxCapacity,
+      minThreshold: minThreshold ?? this.minThreshold,
+      maxThreshold: maxThreshold ?? this.maxThreshold,
+      lastUpdate: lastUpdate ?? this.lastUpdate,
+      isActive: isActive ?? this.isActive,
+      parentDeviceId: parentDeviceId ?? this.parentDeviceId,
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'deviceSerial': deviceSerial,
+      'deviceName': deviceName,
+      'waterLevel': waterLevel,
+      'maxCapacity': maxCapacity,
+      'minThreshold': minThreshold,
+      'maxThreshold': maxThreshold,
+      'lastUpdate': lastUpdate.toIso8601String(),
+      'isActive': isActive ? 1 : 0, // Convert bool to int for database
+      'parentDeviceId': parentDeviceId,
+    };
+  }
+
+  factory WaterLevelSensor.fromMap(Map<String, dynamic> map) {
+    return WaterLevelSensor(
+      id: map['id'],
+      deviceSerial: map['deviceSerial'],
+      deviceName: map['deviceName'],
+      waterLevel: map['waterLevel'].toDouble(),
+      maxCapacity: map['maxCapacity'].toDouble(),
+      minThreshold: map['minThreshold'].toDouble(),
+      maxThreshold: map['maxThreshold'].toDouble(),
+      lastUpdate: DateTime.parse(map['lastUpdate']),
+      isActive: map['isActive'] == 1, // Convert int to bool from database
+      parentDeviceId: map['parentDeviceId'],
+    );
+  }
+}
+
+// Model cho thiết bị con
+class SubDevice {
+  final int? id;
+  final int parentDeviceId;
+  final String subDeviceType; // pump, gate, water_sensor
+  final int subDeviceNumber;
+  final int subDeviceStatus; // 0: inactive, 1: active
+  final String? deviceSerial;
+  final String? deviceName;
+
+  SubDevice({
+    this.id,
+    required this.parentDeviceId,
+    required this.subDeviceType,
+    required this.subDeviceNumber,
+    required this.subDeviceStatus,
+    this.deviceSerial,
+    this.deviceName,
+  });
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'parentDeviceId': parentDeviceId,
+      'subDeviceType': subDeviceType,
+      'subDeviceNumber': subDeviceNumber,
+      'subDeviceStatus': subDeviceStatus,
+      'deviceSerial': deviceSerial,
+      'deviceName': deviceName,
+    };
+  }
+
+  factory SubDevice.fromMap(Map<String, dynamic> map) {
+    return SubDevice(
+      id: map['id'],
+      parentDeviceId: map['parentDeviceId'],
+      subDeviceType: map['subDeviceType'],
+      subDeviceNumber: map['subDeviceNumber'],
+      subDeviceStatus: map['subDeviceStatus'],
+      deviceSerial: map['deviceSerial'],
+      deviceName: map['deviceName'],
+    );
+  }
+
+  // Tạo tên hiển thị cho thiết bị con
+  String get displayName {
+    switch (subDeviceType) {
+      case 'pump':
+        return 'Máy Bơm $subDeviceNumber';
+      case 'gate':
+        return 'Cổng Phai $subDeviceNumber';
+      case 'water_sensor':
+        return 'Cảm Biến Mực Nước $subDeviceNumber';
+      default:
+        return 'Thiết Bị $subDeviceNumber';
+    }
+  }
+
+  // Tạo serial number cho thiết bị con
+  String generateSerial(String parentSerial) {
+    return '${parentSerial}_${subDeviceType}_$subDeviceNumber';
+  }
+}
+
+// Model cho thiết bị trạm bơm
+class PumpStationDevice {
+  final String deviceSerial;
+  final String deviceName;
+  final List<PumpStatus> pumps;
+  final List<GateStatus> gates;
+  final double waterLevel; // Mực nước từ cảm biến
+  final DateTime lastUpdate;
+
+  PumpStationDevice({
+    required this.deviceSerial,
+    required this.deviceName,
+    required this.pumps,
+    required this.gates,
+    this.waterLevel = 0.0,
+    required this.lastUpdate,
+  });
+
+  // Tạo thiết bị trạm bơm mặc định
+  factory PumpStationDevice.createDefault(String serial, String name) {
+    return PumpStationDevice(
+      deviceSerial: serial,
+      deviceName: name,
+      pumps: [],
+      gates: [],
+      waterLevel: 0.0,
+      lastUpdate: DateTime.now(),
+    );
+  }
+
+  // Copy with method
+  PumpStationDevice copyWith({
+    String? deviceSerial,
+    String? deviceName,
+    List<PumpStatus>? pumps,
+    List<GateStatus>? gates,
+    double? waterLevel,
+    DateTime? lastUpdate,
+  }) {
+    return PumpStationDevice(
+      deviceSerial: deviceSerial ?? this.deviceSerial,
+      deviceName: deviceName ?? this.deviceName,
+      pumps: pumps ?? this.pumps,
+      gates: gates ?? this.gates,
+      waterLevel: waterLevel ?? this.waterLevel,
+      lastUpdate: lastUpdate ?? this.lastUpdate,
+    );
+  }
+
+  // Cập nhật trạng thái máy bơm
+  PumpStationDevice updatePumpStatus(int pumpIndex, bool isActive) {
+    if (pumpIndex > 0 && pumpIndex <= pumps.length) {
+      List<PumpStatus> updatedPumps = List.from(pumps);
+      updatedPumps[pumpIndex - 1] = PumpStatus(
+        id: updatedPumps[pumpIndex - 1].id,
+        number: updatedPumps[pumpIndex - 1].number,
+        isActive: isActive,
+        hasWater: updatedPumps[pumpIndex - 1].hasWater,
+        serial: updatedPumps[pumpIndex - 1].serial,
+        name: updatedPumps[pumpIndex - 1].name,
+      );
+
+      return copyWith(pumps: updatedPumps);
+    }
+    return this;
+  }
+
+  // Cập nhật trạng thái cổng phai
+  PumpStationDevice updateGateStatus(int gateIndex, bool isOpen) {
+    if (gateIndex > 0 && gateIndex <= gates.length) {
+      List<GateStatus> updatedGates = List.from(gates);
+      updatedGates[gateIndex - 1] = GateStatus(
+        id: updatedGates[gateIndex - 1].id,
+        number: updatedGates[gateIndex - 1].number,
+        isOpen: isOpen,
+        serial: updatedGates[gateIndex - 1].serial,
+        name: updatedGates[gateIndex - 1].name,
+      );
+
+      return copyWith(gates: updatedGates);
+    }
+    return this;
+  }
+
+  // Chuyển đổi thành Map để lưu vào database
+  Map<String, dynamic> toMap() {
+    return {
+      'deviceSerial': deviceSerial,
+      'deviceName': deviceName,
+      'pumps': pumps.map((pump) => pump.toMap()).toList(),
+      'gates': gates.map((gate) => gate.toMap()).toList(),
+      'waterLevel': waterLevel,
+      'lastUpdate': lastUpdate.toIso8601String(),
+    };
+  }
+
+  // Tạo từ Map
+  factory PumpStationDevice.fromMap(Map<String, dynamic> map) {
+    return PumpStationDevice(
+      deviceSerial: map['deviceSerial'],
+      deviceName: map['deviceName'],
+      pumps: (map['pumps'] as List)
+          .map((pumpMap) => PumpStatus.fromMap(pumpMap))
+          .toList(),
+      gates: (map['gates'] as List)
+          .map((gateMap) => GateStatus.fromMap(gateMap))
+          .toList(),
+      waterLevel: (map['waterLevel'] as num?)?.toDouble() ?? 0.0,
+      lastUpdate: DateTime.parse(map['lastUpdate']),
+    );
+  }
+}
+
+// Model cho trạng thái máy bơm
+class PumpStatus {
+  final int? id;
+  final int number;
+  final bool isActive;
+  final bool hasWater;
+  final String serial;
+  final String name;
+
+  PumpStatus({
+    this.id,
+    required this.number,
+    required this.isActive,
+    required this.hasWater,
+    this.serial = '',
+    this.name = '',
+  });
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'number': number,
+      'isActive': isActive,
+      'hasWater': hasWater,
+      'serial': serial,
+      'name': name,
+    };
+  }
+
+  factory PumpStatus.fromMap(Map<String, dynamic> map) {
+    return PumpStatus(
+      id: map['id'],
+      number: map['number'],
+      isActive: map['isActive'],
+      hasWater: map['hasWater'],
+      serial: map['serial'] ?? '',
+      name: map['name'] ?? '',
+    );
+  }
+}
+
+// Model cho trạng thái cổng phai
+class GateStatus {
+  final int? id;
+  final int number;
+  final bool isOpen;
+  final bool isClosed; // Trạng thái magnetic switch
+  final String serial;
+  final String name;
+
+  GateStatus({
+    this.id,
+    required this.number,
+    required this.isOpen,
+    this.isClosed = false,
+    this.serial = '',
+    this.name = '',
+  });
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'number': number,
+      'isOpen': isOpen,
+      'isClosed': isClosed,
+      'serial': serial,
+      'name': name,
+    };
+  }
+
+  factory GateStatus.fromMap(Map<String, dynamic> map) {
+    return GateStatus(
+      id: map['id'],
+      number: map['number'],
+      isOpen: map['isOpen'],
+      isClosed: map['isClosed'] ?? false,
+      serial: map['serial'] ?? '',
+      name: map['name'] ?? '',
+    );
+  }
+}
+
+// Model cho lịch sử máy bơm
+class PumpHistory {
+  final int? id;
+  final String deviceSerial;
+  final int pumpNumber;
+  final bool isRunning;
+  final bool hasWater;
+  final DateTime timestamp;
+  final String action; // 'BẬT', 'TẮT'
+
+  PumpHistory({
+    this.id,
+    required this.deviceSerial,
+    required this.pumpNumber,
+    required this.isRunning,
+    required this.hasWater,
+    required this.timestamp,
+    required this.action,
+  });
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'deviceSerial': deviceSerial,
+      'pumpNumber': pumpNumber,
+      'isRunning': isRunning ? 1 : 0,
+      'hasWater': hasWater ? 1 : 0,
+      'timestamp': timestamp.toIso8601String(),
+      'action': action,
+    };
+  }
+
+  factory PumpHistory.fromMap(Map<String, dynamic> map) {
+    return PumpHistory(
+      id: map['id'],
+      deviceSerial: map['deviceSerial'],
+      pumpNumber: map['pumpNumber'],
+      isRunning: map['isRunning'] == 1,
+      hasWater: map['hasWater'] == 1,
+      timestamp: DateTime.parse(map['timestamp']),
+      action: map['action'],
+    );
+  }
+}
+
+// Model cho lịch sử cổng phai
+class GateHistory {
+  final int? id;
+  final String deviceSerial;
+  final int gateNumber;
+  final bool isOpen;
+  final DateTime timestamp;
+  final String action; // 'MỞ', 'ĐÓNG'
+
+  GateHistory({
+    this.id,
+    required this.deviceSerial,
+    required this.gateNumber,
+    required this.isOpen,
+    required this.timestamp,
+    required this.action,
+  });
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'deviceSerial': deviceSerial,
+      'gateNumber': gateNumber,
+      'isOpen': isOpen ? 1 : 0,
+      'timestamp': timestamp.toIso8601String(),
+      'action': action,
+    };
+  }
+
+  factory GateHistory.fromMap(Map<String, dynamic> map) {
+    return GateHistory(
+      id: map['id'],
+      deviceSerial: map['deviceSerial'],
+      gateNumber: map['gateNumber'],
+      isOpen: map['isOpen'] == 1,
+      timestamp: DateTime.parse(map['timestamp']),
+      action: map['action'],
+    );
   }
 }

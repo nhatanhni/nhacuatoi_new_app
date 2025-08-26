@@ -2,6 +2,7 @@
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'dart:io';
 import 'package:iot_app/models/device.dart';
 import 'package:iot_app/database/database_helper.dart';
@@ -186,23 +187,18 @@ class _ManageDeviceScreenState extends State<ManageDeviceScreen> {
                                                   _devices.removeAt(index);
                                                 });
                                                 Navigator.of(context).pop();
-                                                ScaffoldMessenger.of(context)
-                                                    .showSnackBar(
-                                                  SnackBar(
-                                                    content: Text(
-                                                        "Xoá thiết bị thành công."),
-                                                    duration:
-                                                        Duration(seconds: 2),
-                                                    backgroundColor:
-                                                        Theme.of(context)
-                                                            .primaryColor,
-                                                    action: SnackBarAction(
-                                                      label: 'Huỷ',
-                                                      onPressed: () {
-                                                        // Handle undo action
-                                                      },
-                                                    ),
-                                                  ),
+                                                Fluttertoast.showToast(
+                                                  msg:
+                                                      "Xoá thiết bị thành công.",
+                                                  toastLength:
+                                                      Toast.LENGTH_SHORT,
+                                                  gravity: ToastGravity.BOTTOM,
+                                                  timeInSecForIosWeb: 1,
+                                                  backgroundColor:
+                                                      Theme.of(context)
+                                                          .primaryColor,
+                                                  textColor: Colors.white,
+                                                  fontSize: 16.0,
                                                 );
                                               },
                                             ),

@@ -2,6 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:iot_app/repository/api_service.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -47,14 +48,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
     if (!_isTermsAccepted) {
       // If terms are not accepted, show error toast
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            "Bạn phải đồng ý với các điều khoản Nhà Của Tôi",
-            style: TextStyle(color: Colors.white),
-          ),
-          backgroundColor: Colors.red,
-        ),
+      Fluttertoast.showToast(
+        msg: "Bạn phải đồng ý với các điều khoản Nhà Của Tôi",
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.BOTTOM,
+        backgroundColor: Colors.red,
+        textColor: Colors.white,
       );
       return;
     }
@@ -69,9 +68,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
         'address': address,
       });
       print(result);
-      // Reset error state when successful
-      _isRegisterError = false;
-      _result = '';
       // await _userRepository.saveUserData(result['Data']);
       // await _userRepository.saveLoginStatus(true); // Save login status
     } catch (e) {
@@ -86,61 +82,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   void _launchURL() async {
-    // Link điều khoản mới
-    const url = 'http://nhacuatoi.com.vn/assets/images/dieukhoan.html';
-    try {
-      if (await canLaunchUrl(Uri.parse(url))) {
-        await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
-      } else {
-        // Nếu không mở được, hiển thị dialog điều khoản trong app
-        _showTermsDialog();
-      }
-    } catch (e) {
-      // Nếu có lỗi, hiển thị dialog điều khoản trong app
-      _showTermsDialog();
+    const url = 'http://nhacuatoi.com.vn:5001/index.php/services/privacy';
+    if (await canLaunchUrl(Uri.parse(url))) {
+      await launchUrl(Uri.parse(url));
+    } else {
+      throw 'Could not launch $url';
     }
-  }
-
-  void _showTermsDialog() {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Điều khoản sử dụng'),
-          content: const SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  'Điều khoản sử dụng ứng dụng Nhà Của Tôi:',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                SizedBox(height: 10),
-                Text('1. Ứng dụng được sử dụng để quản lý thiết bị IoT trong nhà.'),
-                Text('2. Dữ liệu cá nhân sẽ được bảo mật và không chia sẻ với bên thứ ba.'),
-                Text('3. Người dùng chịu trách nhiệm về việc sử dụng thiết bị an toàn.'),
-                Text('4. Ứng dụng có thể gửi thông báo về trạng thái thiết bị.'),
-                Text('5. Có thể cập nhật điều khoản này bất cứ lúc nào.'),
-                SizedBox(height: 10),
-                Text(
-                  'Bằng việc đồng ý, bạn đã đọc và chấp nhận các điều khoản trên.',
-                  style: TextStyle(fontStyle: FontStyle.italic),
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: const Text('Đóng'),
-            ),
-          ],
-        );
-      },
-    );
   }
 
   @override
@@ -249,16 +196,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               borderRadius: BorderRadius.circular(10)),
                           labelText: 'Email',
                         ),
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Vui lòng nhập email';
-                          }
-                          // Basic email validation
-                          if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
-                            return 'Email không hợp lệ';
-                          }
-                          return null;
-                        },
+
                         onFieldSubmitted: (_) => _phoneFocusNode.requestFocus(),
                       ),
                     ),
@@ -274,16 +212,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               borderRadius: BorderRadius.circular(10)),
                           labelText: 'Số điện thoại',
                         ),
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Vui lòng nhập số điện thoại';
-                          }
-                          // Basic phone validation (Vietnamese format)
-                          if (!RegExp(r'^[0-9]{10,11}$').hasMatch(value)) {
-                            return 'Số điện thoại không hợp lệ';
-                          }
-                          return null;
-                        },
+
                         onFieldSubmitted: (_) =>
                             _addressFocusNode.requestFocus(),
                       ),
@@ -350,7 +279,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           builder: (context) {
                             return AlertDialog.adaptive(
                               title: const Text('Lỗi đăng nhập'),
-                              content: Text("Chi tiết: $_result"),
+                              content: Text("Chi tiết: _result"),
                               actions: [
                                 TextButton(
                                   onPressed: () {
@@ -363,27 +292,25 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             );
                           });
                     } else {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            "Đăng ký thành công!",
-                            style: TextStyle(color: Colors.white),
-                          ),
+                      Fluttertoast.showToast(
+                          msg: "Đăng ký thành công!",
+                          toastLength: Toast.LENGTH_SHORT,
+                          gravity: ToastGravity.BOTTOM,
+                          timeInSecForIosWeb: 1,
                           backgroundColor: Theme.of(context).primaryColor,
-                        ),
-                      );
+                          textColor: Colors.white,
+                          fontSize: 16.0);
                       Navigator.pushNamed(context, '/login');
                     }
                   } else {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          "Vui lòng điền đầy đủ thông tin!",
-                          style: TextStyle(color: Colors.white),
-                        ),
+                    Fluttertoast.showToast(
+                        msg: "Vui lòng điền đầy đủ thông tin!",
+                        toastLength: Toast.LENGTH_SHORT,
+                        gravity: ToastGravity.BOTTOM,
+                        timeInSecForIosWeb: 1,
                         backgroundColor: Colors.red,
-                      ),
-                    );
+                        textColor: Colors.white,
+                        fontSize: 16.0);
                   }
                 },
                 onTapCancel: () {

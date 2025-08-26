@@ -52,9 +52,36 @@
 	<key>NSMicrophoneUsageDescription</key>
 	<string>This app needs microphone access for video recording and QR scanning.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>This app needs location access to scan nearby WiFi networks.</string>
+	<string>Ứng dụng cần quyền vị trí để quét và kết nối mạng WiFi. Quyền này cần thiết để thiết lập thiết bị IoT.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-	<string>This app needs location access to scan nearby WiFi networks.</string>
+	<string>Ứng dụng cần quyền vị trí để quét và kết nối mạng WiFi. Quyền này cần thiết để thiết lập thiết bị IoT.</string>
+	<key>NSLocationAlwaysUsageDescription</key>
+	<string>Ứng dụng cần quyền vị trí để quét và kết nối mạng WiFi. Quyền này cần thiết để thiết lập thiết bị IoT.</string>
+	<key>NSLocationTemporaryUsageDescriptionDictionary</key>
+	<dict>
+		<key>WiFiScanning</key>
+		<string>Ứng dụng cần quyền vị trí chính xác để quét và kết nối mạng WiFi.</string>
+	</dict>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>Ứng dụng cần truy cập mạng cục bộ để khám phá và kết nối thiết bị IoT.</string>
+	<key>NSBonjourServices</key>
+	<array>
+		<string>_http._tcp</string>
+		<string>_https._tcp</string>
+		<string>_wifi._tcp</string>
+	</array>
+	<key>NSLocationUsageDescription</key>
+	<string>Ứng dụng cần quyền vị trí để quét mạng WiFi và thiết lập thiết bị IoT.</string>
+	<key>NSWiFiUsageDescription</key>
+	<string>Ứng dụng cần quyền WiFi để quét, kết nối và cài đặt mạng WiFi cho thiết bị IoT.</string>
+	<key>NSNetworkUsageDescription</key>
+	<string>Ứng dụng cần truy cập mạng để giao tiếp với thiết bị IoT và cài đặt WiFi.</string>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>http</string>
+		<string>https</string>
+		<string>wifi</string>
+	</array>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>remote-notification</string>

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:iot_app/repository/user_repository.dart';
-import 'notification_list_widget.dart';
-import '../screens/violation_statistics_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class AppDrawer extends StatefulWidget {
   const AppDrawer({Key? key}) : super(key: key);
@@ -100,36 +100,6 @@ class _AppDrawerState extends State<AppDrawer> {
               Navigator.pushNamed(context, "/device_list");
             },
           ),
-          ListTile(
-            leading: const Icon(
-              Icons.notifications,
-            ),
-            title: const Text('Lịch sử Thông báo'),
-            onTap: () {
-              Navigator.of(context).pop();
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const NotificationListWidget(),
-                ),
-              );
-            },
-          ),
-          ListTile(
-            leading: const Icon(
-              Icons.analytics,
-            ),
-            title: const Text('Thống kê quan trắc vi phạm'),
-            onTap: () {
-              Navigator.of(context).pop();
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const ViolationStatisticsScreen(),
-                ),
-              );
-            },
-          ),
           const Divider(),
           const ListTile(
             title: Text("Cài đặt"),
@@ -157,12 +127,13 @@ class _AppDrawerState extends State<AppDrawer> {
           ),
           ListTile(
             leading: const Icon(
-              Icons.settings_input_component,
+              Icons.wifi_protected_setup,
             ),
-            title: const Text('Cài đặt Thiết bị IoT'),
+            title: const Text('Cài đặt WiFi thiết bị'),
             onTap: () {
+              // navigate to WiFi Setup Screen
               Navigator.of(context).pop();
-              Navigator.pushNamed(context, "/iot_setup");
+              Navigator.pushNamed(context, "/wifi_setup");
             },
           ),
           const Divider(),
@@ -209,12 +180,14 @@ class _AppDrawerState extends State<AppDrawer> {
                           // clear user data and login status
                           userRepository.clearUserData();
                           userRepository.clearLoginStatus();
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text("Đăng xuất thành công!"),
+                          Fluttertoast.showToast(
+                              msg: "Đăng xuất thành công!",
+                              toastLength: Toast.LENGTH_SHORT,
+                              gravity: ToastGravity.BOTTOM,
+                              timeInSecForIosWeb: 1,
                               backgroundColor: Theme.of(context).primaryColor,
-                            ),
-                          );
+                              textColor: Colors.white,
+                              fontSize: 16.0);
                           // then navigate to login screen
                           Navigator.of(context).pop();
                           Navigator.pushNamedAndRemoveUntil(

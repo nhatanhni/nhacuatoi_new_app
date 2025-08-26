@@ -4,11 +4,11 @@ import 'dart:io';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:iot_app/models/device.dart';
-import 'package:iot_app/database/database_helper.dart';
-import 'package:iot_app/widgets/appbar_back_to_home_widget.dart';
-import 'package:iot_app/widgets/appbar_dropdown_widget.dart';
-import 'package:iot_app/widgets/custom_button_widget.dart';
+import '../models/device.dart';
+import '../database/database_helper.dart';
+import '../widgets/appbar_back_to_home_widget.dart';
+import '../widgets/appbar_dropdown_widget.dart';
+import '../widgets/custom_button_widget.dart';
 
 class AddDeviceScreen extends StatefulWidget {
   AddDeviceScreen({Key? key}) : super(key: key);
@@ -24,6 +24,11 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> {
       TextEditingController();
   String dropdownValue = 'Công tắc';
   String dropdownSensorValue = 'Nhiệt độ';
+  
+  // Form fields cho sensor mực nước
+  final _maxCapacityController = TextEditingController(text: '100');
+  final _minThresholdController = TextEditingController(text: '10');
+  final _maxThresholdController = TextEditingController(text: '90');
 
   final dbHelper = DatabaseHelper.instance;
 
@@ -44,6 +49,14 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> {
         sensorType: dropdownSensorValue,
         sensorThreshold: baseValueForSlider.round(),
       );
+    } else if (deviceType == 'Trạm bơm') {
+      // Create a new pump station device
+      device = Device(
+        deviceType: deviceType,
+        deviceSerial: _deviceSerialTextEditingController.text,
+        deviceName: _deviceNameTextEditingController.text,
+        deviceStatus: 0,
+      );
     } else {
       // Create a new device with type switch
       device = Device(
@@ -59,7 +72,19 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> {
 
     // Insert the SmartDevice into the database
     try {
-      await dbHelper.insertDevice(device);
+      final deviceId = await dbHelper.insertDevice(device);
+      
+      // Nếu là trạm bơm, tạo các thiết bị con mặc định
+      if (deviceType == 'Trạm bơm') {
+        try {
+          print('🏭 Creating pump station with ID: $deviceId');
+          await dbHelper.createDefaultPumpStationSubDevices(deviceId);
+          print('✅ Pump station created successfully');
+        } catch (e) {
+          print('❌ Error creating pump station sub devices: $e');
+          // Vẫn tiếp tục mà không throw lỗi
+        }
+      }
 
       Navigator.pushNamed(localContext, "/manage_device");
     } catch (e) {
@@ -82,6 +107,16 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> {
         },
       );
     }
+  }
+
+  @override
+  void dispose() {
+    _deviceSerialTextEditingController.dispose();
+    _deviceNameTextEditingController.dispose();
+    _maxCapacityController.dispose();
+    _minThresholdController.dispose();
+    _maxThresholdController.dispose();
+    super.dispose();
   }
 
   @override
@@ -119,7 +154,7 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> {
                           isCreatingSensor = newValue == 'Sensor';
                         });
                       },
-                      items: <String>['Công tắc', 'Sensor', 'Hồng ngoại', 'Đồng hồ nước', 'Contactor', 'Quan trắc nước thải']
+                                                  items: <String>['Công tắc', 'Sensor', 'Hồng ngoại', 'Đồng hồ nước', 'Trạm bơm']
                           .map<DropdownMenuItem<String>>((String value) {
                         return DropdownMenuItem<String>(
                           value: value,

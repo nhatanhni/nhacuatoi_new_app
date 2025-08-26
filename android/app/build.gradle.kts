@@ -36,8 +36,8 @@ android {
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = 21
         targetSdk = 35
-        versionCode = 16
-        versionName = "2.0.7"
+        versionCode = 17
+        versionName = "2.0.8"
         
         // Android 15 specific configurations
         ndk {

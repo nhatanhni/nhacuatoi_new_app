@@ -7,6 +7,7 @@ import 'package:iot_app/widgets/drawer_widget.dart';
 import 'package:iot_app/models/device.dart';
 import 'package:iot_app/database/database_helper.dart';
 import 'package:iot_app/screens/device_detail_screen.dart';
+import 'package:iot_app/screens/pump_station_screen.dart';
 import 'package:mqtt_client/mqtt_client.dart';
 
 class DeviceListScreen extends StatefulWidget {
@@ -157,24 +158,44 @@ class _DeviceListScreenState extends State<DeviceListScreen> {
                   itemBuilder: (context, index) {
                     return GestureDetector(
                       onTap: () {
-                        // Navigate to the device detail screen
-                        Navigator.pushNamed(
-                          context,
-                          DeviceDetailScreen.routeName,
-                          arguments: _devices[index],
-                        ).then((value) {
-                          if (value != null && value is bool) {
-                            // Update the device status in the list based on the returned value
-                            _updateDeviceStatus(
-                                _devices[index].id!, value ? 1 : 0);
-                          }
-                          // Reconnect to the MQTT server because this screen was disposed when navigating to the detail screen
-                          // check if the client is connected before reconnecting
-                          if (manager.client.connectionStatus?.state !=
-                              MqttConnectionState.connected) {
-                            manager.connect();
-                          }
-                        });
+                        // Check device type and navigate accordingly
+                        if (_devices[index].deviceType == 'Trạm bơm') {
+                          // Navigate to Pump Station Screen
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => PumpStationScreen(
+                                device: _devices[index],
+                              ),
+                            ),
+                          ).then((value) {
+                            // Reconnect to the MQTT server because this screen was disposed when navigating to the detail screen
+                            // check if the client is connected before reconnecting
+                            if (manager.client.connectionStatus?.state !=
+                                MqttConnectionState.connected) {
+                              manager.connect();
+                            }
+                          });
+                        } else {
+                          // Navigate to the device detail screen for other devices
+                          Navigator.pushNamed(
+                            context,
+                            DeviceDetailScreen.routeName,
+                            arguments: _devices[index],
+                          ).then((value) {
+                            if (value != null && value is bool) {
+                              // Update the device status in the list based on the returned value
+                              _updateDeviceStatus(
+                                  _devices[index].id!, value ? 1 : 0);
+                            }
+                            // Reconnect to the MQTT server because this screen was disposed when navigating to the detail screen
+                            // check if the client is connected before reconnecting
+                            if (manager.client.connectionStatus?.state !=
+                                MqttConnectionState.connected) {
+                              manager.connect();
+                            }
+                          });
+                        }
                       },
                       child: Container(
                         width: MediaQuery.of(context).size.width * 0.4,
@@ -204,8 +225,10 @@ class _DeviceListScreenState extends State<DeviceListScreen> {
                                   : _devices[index].deviceType == 'Sensor'
                                       ? Icons.waves
                                       : _devices[index].deviceType == 'Đồng hồ nước'
-                                          ? Icons.water_drop
-                                      : Icons.visibility,
+                                          ? Icons.water
+                                          : _devices[index].deviceType == 'Trạm bơm'
+                                              ? Icons.water
+                                              : Icons.visibility,
                               size: 50,
                             ),
                             Row(

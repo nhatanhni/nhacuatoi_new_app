@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart'; // Import package for launching URLs
 import 'package:iot_app/repository/api_service.dart';
@@ -27,60 +28,12 @@ class _LoginScreenState extends State<LoginScreen> {
 
   // Function to launch the privacy policy URL
   void _launchPrivacyPolicy() async {
-    const url = 'http://nhacuatoi.com.vn/assets/images/dieukhoan.html';
-    try {
-      if (await canLaunchUrl(Uri.parse(url))) {
-        await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
-      } else {
-        // Nếu không mở được, hiển thị dialog điều khoản trong app
-        _showTermsDialog();
-      }
-    } catch (e) {
-      // Nếu có lỗi, hiển thị dialog điều khoản trong app
-      _showTermsDialog();
+    const url = 'http://nhacuatoi.com.vn:5001/index.php/services/privacy';
+    if (await canLaunch(url)) {
+      await launch(url);
+    } else {
+      throw 'Could not launch $url';
     }
-  }
-
-  void _showTermsDialog() {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Điều khoản sử dụng'),
-          content: const SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  'Điều khoản sử dụng ứng dụng Nhà Của Tôi:',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                SizedBox(height: 10),
-                Text('1. Ứng dụng được sử dụng để quản lý thiết bị IoT trong nhà.'),
-                Text('2. Dữ liệu cá nhân sẽ được bảo mật và không chia sẻ với bên thứ ba.'),
-                Text('3. Người dùng chịu trách nhiệm về việc sử dụng thiết bị an toàn.'),
-                Text('4. Ứng dụng có thể gửi thông báo về trạng thái thiết bị.'),
-                Text('5. Có thể cập nhật điều khoản này bất cứ lúc nào.'),
-                SizedBox(height: 10),
-                Text(
-                  'Bằng việc đồng ý, bạn đã đọc và chấp nhận các điều khoản trên.',
-                  style: TextStyle(fontStyle: FontStyle.italic),
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: const Text('Đóng'),
-            ),
-          ],
-        );
-      },
-    );
   }
 
   Future<void> _login() async {
@@ -111,8 +64,14 @@ class _LoginScreenState extends State<LoginScreen> {
         SharedPreferences prefs = await SharedPreferences.getInstance();
         await prefs.setString('accessToken', accessToken ?? '');
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Đăng nhập thành công!")),
+        Fluttertoast.showToast(
+          msg: "Đăng nhập thành công!",
+          toastLength: Toast.LENGTH_SHORT,
+          gravity: ToastGravity.BOTTOM,
+          timeInSecForIosWeb: 1,
+          backgroundColor: Colors.green,
+          textColor: Colors.white,
+          fontSize: 16.0,
         );
 
         Navigator.pushNamed(context, '/home');

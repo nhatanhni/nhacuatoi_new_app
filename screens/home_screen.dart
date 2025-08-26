@@ -122,7 +122,7 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
   }
 
   void _initializeMQTT() async {
-    final mqttManager = MQTTManager('nhacuatoi.com.vn', 'flutter_client');
+    final mqttManager = MQTTManager('baocao.vnptnet.vn', 'flutter_client');
     await mqttManager.connect();
 
     List<Device> devices = await DatabaseHelper.instance.queryAllDevices();

@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:iot_app/repository/mqtt_manager.dart';
@@ -12,6 +13,7 @@ import 'package:iot_app/screens/add_device_screen.dart';
 import 'package:iot_app/screens/login_screen.dart';
 import 'package:iot_app/screens/manage_device_screen.dart';
 import 'package:iot_app/screens/device_detail_screen.dart';
+import 'package:iot_app/screens/wifi_setup_screen.dart';
 import 'package:iot_app/models/device.dart';
 import 'package:android_alarm_manager_plus/android_alarm_manager_plus.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -20,8 +22,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:mqtt_client/mqtt_client.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:workmanager/workmanager.dart';
-import 'package:iot_app/screens/iot_setup_screen.dart';
-import 'package:iot_app/screens/violation_statistics_screen.dart';
+import 'package:iot_app/screens/pump_station_screen.dart';
 
 import 'database/database_helper.dart';
 import 'widgets/notification_service.dart';
@@ -44,7 +45,7 @@ void callbackDispatcher() {
 
 void _showNotification(String message, FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin) async {
   final notificationService = NotificationService();
-  await notificationService.showWaterAlarmNotification(message);
+  await notificationService.showNotification('Thông báo', message);
 }
 
 Future<void> _selectNotification(String? payload) async {
@@ -87,26 +88,33 @@ Future<String?> _getNotificationState() async {
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await dotenv.load();
+  
+  // Only load dotenv on mobile platforms
+  if (!kIsWeb) {
+    await dotenv.load();
+  }
 
-  if (Platform.isAndroid) {
+  if (!kIsWeb && Platform.isAndroid) {
     await AndroidAlarmManager.initialize();
   }
 
-  Workmanager().initialize(callbackDispatcher, isInDebugMode: true);
+  // Only initialize Workmanager on mobile platforms
+  if (!kIsWeb) {
+    Workmanager().initialize(callbackDispatcher, isInDebugMode: true);
 
-  try {
-    await Workmanager().registerPeriodicTask(
-      "1",
-      "simpleTask",
-      frequency: Duration(minutes: 15),
-    );
-  } catch (e) {
-    print('Error registering Workmanager task: $e');
+    try {
+      await Workmanager().registerPeriodicTask(
+        "1",
+        "simpleTask",
+        frequency: Duration(minutes: 15),
+      );
+    } catch (e) {
+      print('Error registering Workmanager task: $e');
+    }
   }
 
   // Enable edge-to-edge display for Android 15 compatibility
-  if (Platform.isAndroid) {
+  if (!kIsWeb && Platform.isAndroid) {
     // Use new API for Android 15 - avoid deprecated setStatusBarColor, etc.
     SystemChrome.setEnabledSystemUIMode(
       SystemUiMode.edgeToEdge,
@@ -163,14 +171,8 @@ class _MyAppState extends State<MyApp> {
   }
 
   void _initializeNotificationService() async {
-    // Khởi tạo NotificationService với navigator key
-    await _notificationService.initialize(navigatorKey: MyApp.navigatorKey);
-    
-    // Yêu cầu quyền notification
-    await _notificationService.requestPermissions();
-    
-    // Kiểm tra pending notifications
-    await _notificationService.checkPendingNotifications();
+    // NotificationService đã được khởi tạo trong constructor
+    print('NotificationService initialized');
   }
 
   void _initializeMQTT() async {
@@ -199,7 +201,7 @@ class _MyAppState extends State<MyApp> {
           // Kiểm tra nếu thông báo là cần thiết và có dữ liệu hợp lệ
           if (alert != null && deviceSerial != null) {
             print("Sending notification for device: $deviceSerial with alert: $alert");
-            _notificationService.showWaterAlarmNotification(message);
+            _notificationService.showNotification('Thông báo', message);
           } else {
             print("Skipped notification for device: $deviceSerial due to missing alert or deviceSerial");
           }
@@ -255,7 +257,7 @@ class _MyAppState extends State<MyApp> {
               '/device_list': (context) => DeviceListScreen(),
               '/user_list': (context) => UserListScreen(),
               '/home': (context) => HomeScreen(),
-              '/iot_setup': (context) => IoTSetupScreen()
+              '/wifi_setup': (context) => WiFiSetupScreen(),
             },
             navigatorObservers: [MyApp.routeObserver],
             onGenerateRoute: (settings) {
@@ -271,6 +273,13 @@ class _MyAppState extends State<MyApp> {
                 return MaterialPageRoute(
                   builder: (context) {
                     return DeviceSchedulingScreen(device: device);
+                  },
+                );
+              } else if (settings.name == '/pump_station') {
+                final device = settings.arguments as Device;
+                return MaterialPageRoute(
+                  builder: (context) {
+                    return PumpStationScreen(device: device);
                   },
                 );
               }

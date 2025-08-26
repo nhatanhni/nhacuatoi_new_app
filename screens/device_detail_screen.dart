@@ -84,7 +84,7 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
     //print("đây là thiết bị: ${widget.device.deviceSerial}");
     //print(widget.device.toMap());
     // Initialize the MQTT manager
-    mqttManager = MQTTManager('nhacuatoi.com.vn', 'flutter_client');
+    mqttManager = MQTTManager('baocao.vnptnet.vn', 'flutter_client');
     _connectionFuture = mqttManager.connect();
 
     _isSwitched = widget.device.deviceStatus == 1;

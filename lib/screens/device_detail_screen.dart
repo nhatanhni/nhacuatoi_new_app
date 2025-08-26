@@ -13,7 +13,6 @@ import 'package:iot_app/widgets/device_alarm_widget.dart';
 import 'package:iot_app/widgets/device_sensor_reading_widget.dart';
 import 'package:iot_app/widgets/device_detail_button_widget.dart';
 import 'package:iot_app/widgets/placeholder_box_widget.dart';
-import 'package:iot_app/widgets/wastewater_monitoring_widget.dart';
 import 'package:mqtt_client/mqtt_client.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:syncfusion_flutter_gauges/gauges.dart';
@@ -42,7 +41,6 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
   // declaration for mqtt alarms:
   final _alarmMessageController = StreamController<String>();
 
-  // Water meter data
   Map<String, dynamic>? _waterMeterData;
   bool _isLoadingWater = false;
   String? _waterError;
@@ -111,8 +109,15 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
 
   void _subscribeToTopics() {
     if (mqttManager.client.connectionStatus?.state == MqttConnectionState.connected) {
+      // Subscribe to general sensor topics
       mqttManager.subscribe('NhaCuaToi_${widget.device.deviceSerial}_doam');
       mqttManager.subscribe('NhaCuaToi_${widget.device.deviceSerial}_nhietdo');
+      
+      // Subscribe to water level sensor topic if this is a water level sensor
+      if (widget.device.deviceType == 'Cảm biến mực nước') {
+        mqttManager.subscribe('NhaCuaToi_${widget.device.deviceSerial}_mucnuoc');
+        print('📡 Subscribed to water level topic: NhaCuaToi_${widget.device.deviceSerial}_mucnuoc');
+      }
 
       // Listen for updates on the 'doam' topic
       // mqttManager.updates('NhaCuaToi_${widget.device.deviceSerial}_doam')?.listen((message) {
@@ -213,27 +218,6 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
       });
     }
   }
-
-  String _formatTimestamp(String timestamp) {
-    try {
-      final dateTime = DateTime.parse(timestamp);
-      final now = DateTime.now();
-      final difference = now.difference(dateTime);
-
-      if (difference.inDays > 0) {
-        return DateFormat('dd/MM/yyyy HH:mm').format(dateTime);
-      } else if (difference.inHours > 0) {
-        return '${difference.inHours} giờ trước';
-      } else if (difference.inMinutes > 0) {
-        return '${difference.inMinutes} phút trước';
-      } else {
-        return 'Vừa xong';
-      }
-    } catch (e) {
-      return timestamp;
-    }
-  }
-
 
   @override
   Widget build(BuildContext context) {
@@ -435,11 +419,11 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
               ],
             ),
           )
-              : (widget.device.deviceType == 'Đồng hồ nước')
+              : widget.device.deviceType == 'Đồng hồ nước'
                   ? _buildWaterMeterInfo()
-              : (widget.device.deviceType == 'Quan trắc nước thải')
-                  ? WastewaterMonitoringWidget(device: widget.device)
-              : ListView(
+                  : widget.device.deviceType == 'Cảm biến mực nước'
+                      ? _buildWaterLevelSensorInfo()
+                      : ListView(
               children: [
                 FutureBuilder(
                     future: _connectionFuture,
@@ -618,6 +602,19 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
                               ));
                         },
                       ),
+                      if (widget.device.deviceType == 'Trạm bơm')
+                        DeviceDetailButton(
+                          color: Colors.blue[600]!,
+                          icon: Icons.water,
+                          title: "Quản lý",
+                          onTap: () {
+                            Navigator.pushNamed(
+                              context,
+                              '/pump_station',
+                              arguments: widget.device,
+                            );
+                          },
+                        ),
                     ],
                   ),
                 ),
@@ -737,7 +734,7 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
       return const Center(child: CircularProgressIndicator());
     }
     if (_waterError != null) {
-      return Center(child: Text('Lỗi: $_waterError'));
+      return Center(child: Text('Lỗi: \\$_waterError'));
     }
     if (_waterMeterData == null || _waterMeterData!['Data'] == null) {
       return const Center(child: Text('Không có dữ liệu đồng hồ nước.'));
@@ -760,18 +757,111 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
           margin: const EdgeInsets.all(12),
           child: ListTile(
             leading: const Icon(Icons.water, color: Colors.blue),
-            title: Text('Chỉ số: ${item['MeterReadingLiters']} lít'),
+            title: Text('Chỉ số: \\${item['MeterReadingLiters']} lít'),
             subtitle: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Thời gian: ${_formatTimestamp(item['Timestamp'])}'),
-                Text('Trạng thái van: ${item['ValveStatus']}'),
-                Text('Tình trạng van: ${item['ValveFaultStatus']}'),
+                Text('Thời gian: \\${item['Timestamp']}'),
+                Text('Trạng thái van: \\${item['ValveStatus']}'),
+                Text('Tình trạng van: \\${item['ValveFaultStatus']}'),
               ],
             ),
           ),
         );
       },
+    );
+  }
+
+  Widget _buildWaterLevelSensorInfo() {
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        children: [
+          // Header
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                children: [
+                  Icon(
+                    Icons.water_drop,
+                    size: 48,
+                    color: Colors.blue[600],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Cảm biến mực nước',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  Text(
+                    'Serial: ${widget.device.deviceSerial}',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          
+          // Water Level Reading Widget
+          Expanded(
+            child: DeviceSensorReadingBox(
+              deviceSerial: widget.device.deviceSerial,
+              icon: Icons.water,
+              title: "Mức nước",
+              sensorType: "mucnuoc",
+              color: Colors.blue[600]!,
+              mqttManager: mqttManager,
+            ),
+          ),
+          
+          const SizedBox(height: 16),
+          
+          // Instructions
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Hướng dẫn test:',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text('Topic: NhaCuaToi_${widget.device.deviceSerial}_mucnuoc'),
+                  const SizedBox(height: 4),
+                  Text('Message JSON:'),
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    margin: const EdgeInsets.symmetric(vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[100],
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(
+                      '{"water_level": 45.5, "unit": "cm", "status": "normal"}',
+                      style: TextStyle(
+                        fontFamily: 'monospace',
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

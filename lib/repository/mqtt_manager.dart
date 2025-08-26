@@ -79,8 +79,13 @@ class MQTTManager {
   }
 
   Future<void> publish(String topic, String message) async {
+    print('📤 DEBUG MQTT PUBLISH:');
+    print('   Topic: $topic');
+    print('   Message: $message');
+    print('   Connection status: ${client.connectionStatus?.state}');
+    
     if (client.connectionStatus?.state != MqttConnectionState.connected) {
-      print('MQTT client is not connected, attempting to reconnect...');
+      print('   ⚠️ MQTT client is not connected, attempting to reconnect...');
       await connect();
     }
 
@@ -88,9 +93,9 @@ class MQTTManager {
       final builder = MqttClientPayloadBuilder();
       builder.addString(message);
       client.publishMessage(topic, MqttQos.atLeastOnce, builder.payload!);
-      print('Published message to topic: $topic');
+      print('   ✅ Message published successfully to topic: $topic');
     } else {
-      print('MQTT client is not connected, cannot publish message');
+      print('   ❌ MQTT client is not connected, cannot publish message');
     }
   }
 
@@ -129,31 +134,15 @@ class MQTTManager {
   // Subscribe to a topic
   void subscribe(String topic) {
     if (client.connectionStatus?.state != MqttConnectionState.connected) {
-      throw Exception(
-          'MQTT client is not connected, cannot subscribe to topic');
+      print('MQTT client is not connected, cannot subscribe to topic: $topic');
+      return;
     }
 
+    print('Subscribing to topic: $topic');
     client.subscribe(topic, MqttQos.atLeastOnce);
 
-    _controllers[topic] = StreamController<String>.broadcast();
-
-    if (client.updates != null) {
-      client.updates!.listen(
-            (List<MqttReceivedMessage<MqttMessage>> c) {
-          final MqttPublishMessage recMess = c[0].payload as MqttPublishMessage;
-          final String message = MqttPublishPayload.bytesToStringAsString(recMess.payload.message);
-
-          // Check if the message is for the correct topic
-          if (c[0].topic == topic) {
-            print("Received message: $message from topic: $topic");
-            _controllers[topic]!.add(message);
-            _messageStreamController.add(c[0]);
-          }
-        },
-        onError: (e) {
-          print('Error when receiving message: $e');
-        },
-      );
+    if (!_controllers.containsKey(topic)) {
+      _controllers[topic] = StreamController<String>.broadcast();
     }
   }
 
@@ -166,13 +155,20 @@ class MQTTManager {
 
   // Handle incoming messages
   void _onMessage(List<MqttReceivedMessage<MqttMessage>> event) {
-    final MqttPublishMessage recMess = event[0].payload as MqttPublishMessage;
-    final String message = MqttPublishPayload.bytesToStringAsString(recMess.payload.message);
-
-    String topic = event[0].topic;
-    print('Received message: $message from topic: $topic');
-    
-    // Chỉ log message, không xử lý notification ở đây
-    // Notification sẽ được xử lý trong main.dart
+    for (MqttReceivedMessage<MqttMessage> message in event) {
+      final MqttPublishMessage recMess = message.payload as MqttPublishMessage;
+      final String messageString = MqttPublishPayload.bytesToStringAsString(recMess.payload.message);
+      final String topic = message.topic;
+      
+      print('📨 MQTT RECEIVED: Topic: $topic, Message: $messageString');
+      
+      // Add to message stream for general listeners
+      _messageStreamController.add(message);
+      
+      // Add to specific topic controller if exists
+      if (_controllers.containsKey(topic)) {
+        _controllers[topic]!.add(messageString);
+      }
+    }
   }
 }

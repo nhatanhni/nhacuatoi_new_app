@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:fluttertoast/fluttertoast.dart';
+import 'package:iot_app/repository/user_repository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class AppDrawer extends StatefulWidget {
@@ -167,16 +169,14 @@ class _AppDrawerState extends State<AppDrawer> {
                           // clear user data and login status
                           userRepository.clearUserData();
                           userRepository.clearLoginStatus();
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                "Đăng xuất thành công!",
-                                style: TextStyle(
-                                    color: Theme.of(context).primaryColor),
-                              ),
-                              backgroundColor: Colors.white,
-                            ),
-                          );
+                          Fluttertoast.showToast(
+                              msg: "Đăng xuất thành công!",
+                              toastLength: Toast.LENGTH_SHORT,
+                              gravity: ToastGravity.BOTTOM,
+                              timeInSecForIosWeb: 1,
+                              backgroundColor: Theme.of(context).primaryColor,
+                              textColor: Colors.white,
+                              fontSize: 16.0);
                           // then navigate to login screen
                           Navigator.of(context).pop();
                           Navigator.pushNamedAndRemoveUntil(

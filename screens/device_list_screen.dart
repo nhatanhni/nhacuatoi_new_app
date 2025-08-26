@@ -27,7 +27,7 @@ class _DeviceListScreenState extends State<DeviceListScreen> {
   @override
   void initState() {
     super.initState();
-    manager = MQTTManager('nhacuatoi.com.vn', 'flutter_client');
+    manager = MQTTManager('baocao.vnptnet.vn', 'flutter_client');
     manager.connect();
     _loadDevices(); // Load devices when the screen initializes
   }

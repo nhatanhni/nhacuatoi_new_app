@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:iot_app/models/device.dart';
 import 'package:iot_app/repository/scheduler_repository.dart';
 import 'package:iot_app/widgets/schedule_tag_widget.dart';
@@ -215,17 +216,14 @@ class _DeviceSchedulingScreenState extends State<DeviceSchedulingScreen> {
                   print("Repeat: $repeat");
                   await _postSchedule(
                       selectedHour, selectedMinute, selectedDuration, repeat);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        "Thêm hẹn giờ thành công!",
-                        style: TextStyle(
-                          color: Theme.of(context).primaryColor,
-                        ),
-                      ),
+                  Fluttertoast.showToast(
+                      msg: "Thêm hẹn giờ thành công!",
+                      toastLength: Toast.LENGTH_SHORT,
+                      gravity: ToastGravity.BOTTOM,
+                      timeInSecForIosWeb: 1,
                       backgroundColor: Theme.of(context).primaryColor,
-                    ),
-                  );
+                      textColor: Colors.white,
+                      fontSize: 16.0);
                   Navigator.of(context).pop();
                 },
               ),
@@ -379,17 +377,14 @@ class _DeviceSchedulingScreenState extends State<DeviceSchedulingScreen> {
                     "repeat": thisRepeat,
                     "updateTime": DateTime.now().toIso8601String()
                   });
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        "Sửa hẹn giờ thành công!",
-                        style: TextStyle(
-                          color: Theme.of(context).primaryColor,
-                        ),
-                      ),
+                  Fluttertoast.showToast(
+                      msg: "Sửa hẹn giờ thành công!",
+                      toastLength: Toast.LENGTH_SHORT,
+                      gravity: ToastGravity.BOTTOM,
+                      timeInSecForIosWeb: 1,
                       backgroundColor: Theme.of(context).primaryColor,
-                    ),
-                  );
+                      textColor: Colors.white,
+                      fontSize: 16.0);
                   Navigator.of(context).pop();
                 },
               ),
@@ -565,6 +560,24 @@ class _DeviceSchedulingScreenState extends State<DeviceSchedulingScreen> {
                                                             Navigator.of(
                                                                     context)
                                                                 .pop();
+                                                            Fluttertoast.showToast(
+                                                                msg:
+                                                                    "Xoá hẹn giờ thành công!",
+                                                                toastLength: Toast
+                                                                    .LENGTH_SHORT,
+                                                                gravity:
+                                                                    ToastGravity
+                                                                        .BOTTOM,
+                                                                timeInSecForIosWeb:
+                                                                    1,
+                                                                backgroundColor:
+                                                                    Theme.of(
+                                                                            context)
+                                                                        .primaryColor,
+                                                                textColor:
+                                                                    Colors
+                                                                        .white,
+                                                                fontSize: 16.0);
                                                           },
                                                           child: const Text(
                                                             "Xóa",

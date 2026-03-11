@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:iot_app/models/device.dart';
 import 'package:iot_app/repository/mqtt_manager.dart';
-import 'package:iot_app/database/database_helper.dart';
+import 'package:iot_app/database/database_helper.dart' if (dart.library.html) 'package:iot_app/database/web_database_helper.dart';
 import 'package:iot_app/screens/pump_station_management_screen.dart';
 import 'package:iot_app/widgets/device_detail_button_widget.dart';
 import 'package:mqtt_client/mqtt_client.dart';
@@ -105,6 +105,7 @@ class _PumpStationScreenState extends State<PumpStationScreen> {
             hasWater: false, // Will be updated via MQTT
             serial: pump.deviceSerial ?? '',
             name: pump.deviceName ?? '',
+            connectionStatus: 'unknown', // Default status, will be updated via MQTT
           )).toList(),
           gates: gates.map((gate) => GateStatus(
             id: gate.id!,
@@ -112,6 +113,7 @@ class _PumpStationScreenState extends State<PumpStationScreen> {
             isOpen: gate.subDeviceStatus == 1,
             serial: gate.deviceSerial ?? '',
             name: gate.deviceName ?? '',
+            connectionStatus: 'unknown', // Default status, will be updated via MQTT
           )).toList(),
         );
         _waterSensors = waterSensors;
@@ -334,11 +336,31 @@ class _PumpStationScreenState extends State<PumpStationScreen> {
       }
     }
     
+    // Subscribe to gate relay topics theo logic mở/đóng
     for (int i = 0; i < _pumpStation.gates.length; i++) {
       final gate = _pumpStation.gates[i];
-      final relayTopic = 'NhaCuaToi_${gate.serial}_relay_${gate.number}';
-      print('   Subscribing to gate relay topic: $relayTopic');
-      _mqttManager.subscribe(relayTopic);
+      
+      // Subscribe cho relay mở/đóng tương ứng với từng cổng phai
+      if (gate.number == 1) {
+        // Cổng phai 1: relay 1 (mở) và relay 2 (đóng)
+        final relayTopic1 = 'NhaCuaToi_${gate.serial}_relay_1';
+        final relayTopic2 = 'NhaCuaToi_${gate.serial}_relay_2';
+        print('   Subscribing to gate ${i + 1} (number ${gate.number}) relay topics: $relayTopic1, $relayTopic2');
+        _mqttManager.subscribe(relayTopic1);
+        _mqttManager.subscribe(relayTopic2);
+      } else if (gate.number == 2) {
+        // Cổng phai 2: relay 3 (mở) và relay 4 (đóng)
+        final relayTopic3 = 'NhaCuaToi_${gate.serial}_relay_3';
+        final relayTopic4 = 'NhaCuaToi_${gate.serial}_relay_4';
+        print('   Subscribing to gate ${i + 1} (number ${gate.number}) relay topics: $relayTopic3, $relayTopic4');
+        _mqttManager.subscribe(relayTopic3);
+        _mqttManager.subscribe(relayTopic4);
+      } else {
+        // Cổng phai khác: chỉ subscribe theo number
+        final relayTopic = 'NhaCuaToi_${gate.serial}_relay_${gate.number}';
+        print('   Subscribing to gate ${i + 1} (number ${gate.number}) relay topic: $relayTopic');
+        _mqttManager.subscribe(relayTopic);
+      }
     }
 
     // Subscribe to water level sensor topics theo cấu trúc firmware: NhaCuaToi_serial_water_level_X
@@ -363,11 +385,6 @@ class _PumpStationScreenState extends State<PumpStationScreen> {
     final waterLevelTopic = 'NhaCuaToi_9249022931_mucnuoc';
     print('   Subscribing to water level topic: $waterLevelTopic');
     _mqttManager.subscribe(waterLevelTopic);
-    
-    // DEBUG: Subscribe to test topic
-    final testWaterLevelTopic = 'NhaCuaToi_1948911026_mucnuoc';
-    print('   🧪 DEBUG: Subscribing to test water level topic: $testWaterLevelTopic');
-    _mqttManager.subscribe(testWaterLevelTopic);
 
     // Subscribe to magnetic switch topics theo cấu trúc firmware: NhaCuaToi_serial_magnetic_X
     for (int i = 0; i < _pumpStation.pumps.length; i++) {
@@ -375,6 +392,39 @@ class _PumpStationScreenState extends State<PumpStationScreen> {
       final magneticTopic = 'NhaCuaToi_${pump.serial}_magnetic';
       print('   Subscribing to magnetic topic: $magneticTopic');
       _mqttManager.subscribe(magneticTopic);
+    }
+
+    // Subscribe to device status topic
+    final statusTopic = 'NhaCuaToi_${widget.device.deviceSerial}_status';
+    print('   Subscribing to device status topic: $statusTopic');
+    _mqttManager.subscribe(statusTopic);
+
+    // Subscribe to sub-device status topics
+    print('🔌 Subscribing to sub-device status topics...');
+    
+    // Subscribe to pump status topics using correct pump serials
+    final pumpSerials = ['9249022997', '9249022998']; // Serial numbers for pump 1 and 2
+    for (int i = 0; i < _pumpStation.pumps.length && i < pumpSerials.length; i++) {
+      final pumpSerial = pumpSerials[i];
+      final pumpStatusTopic = 'NhaCuaToi_${pumpSerial}_status';
+      print('   Subscribing to pump ${i + 1} status topic: $pumpStatusTopic');
+      _mqttManager.subscribe(pumpStatusTopic);
+    }
+    
+    // Subscribe to gate status topics using pump serials for gates
+    for (int i = 0; i < _pumpStation.gates.length && i < pumpSerials.length; i++) {
+      final gateSerial = pumpSerials[i]; // Gates use same serials as pumps
+      final gateStatusTopic = 'NhaCuaToi_${gateSerial}_status';
+      print('   Subscribing to gate ${i + 1} status topic: $gateStatusTopic');
+      _mqttManager.subscribe(gateStatusTopic);
+    }
+    
+    // Subscribe to water sensor status topics
+    for (int i = 0; i < _waterSensors.length; i++) {
+      final sensor = _waterSensors[i];
+      final sensorStatusTopic = 'NhaCuaToi_${sensor.deviceSerial}_status';
+      print('   Subscribing to water sensor ${i + 1} status topic: $sensorStatusTopic');
+      _mqttManager.subscribe(sensorStatusTopic);
     }
 
     // Listen for MQTT messages
@@ -389,6 +439,12 @@ class _PumpStationScreenState extends State<PumpStationScreen> {
   void _handleMQTTMessage(String topic, String message) async {
     print('📨 Received MQTT message: $topic = $message');
     print('🔍 DEBUG: Processing topic: $topic');
+    
+    // Check if it's a status topic first
+    if (topic.endsWith('_status')) {
+      print('🔔 STATUS TOPIC DETECTED: $topic');
+      print('🔔 Message content: $message');
+    }
     
     // Handle relay control topics theo cấu trúc firmware: NhaCuaToi_serial_relay_number
     for (int i = 0; i < _pumpStation.pumps.length; i++) {
@@ -446,16 +502,60 @@ class _PumpStationScreenState extends State<PumpStationScreen> {
       }
     }
     
+    // Handle gate relay control topics
     for (int i = 0; i < _pumpStation.gates.length; i++) {
       final gate = _pumpStation.gates[i];
-      final relayTopic = 'NhaCuaToi_${gate.serial}_relay_${gate.number}';
-      if (topic == relayTopic) {
-        final status = message == 'on';
-        setState(() {
-          _pumpStation = _pumpStation.updateGateStatus(i + 1, status);
-        });
-        print('🔧 Updated gate ${gate.name} (relay ${gate.number}) status: $status');
-        return;
+      
+      // Xử lý relay theo logic mở/đóng
+      if (gate.number == 1) {
+        // Cổng phai 1: relay 1 (mở) và relay 2 (đóng)
+        if (topic == 'NhaCuaToi_${gate.serial}_relay_1') {
+          // Relay 1 = mở cổng phai 1
+          final status = message == 'on';
+          setState(() {
+            _pumpStation = _pumpStation.updateGateStatus(i + 1, status); // true = mở
+          });
+          print('🔧 Updated gate ${gate.name} (relay 1 - OPEN) status: ${status ? "OPEN" : "CLOSE"}');
+          return;
+        } else if (topic == 'NhaCuaToi_${gate.serial}_relay_2') {
+          // Relay 2 = đóng cổng phai 1
+          final status = message == 'on';
+          setState(() {
+            _pumpStation = _pumpStation.updateGateStatus(i + 1, !status); // false = đóng
+          });
+          print('🔧 Updated gate ${gate.name} (relay 2 - CLOSE) status: ${!status ? "CLOSE" : "OPEN"}');
+          return;
+        }
+      } else if (gate.number == 2) {
+        // Cổng phai 2: relay 3 (mở) và relay 4 (đóng)
+        if (topic == 'NhaCuaToi_${gate.serial}_relay_3') {
+          // Relay 3 = mở cổng phai 2
+          final status = message == 'on';
+          setState(() {
+            _pumpStation = _pumpStation.updateGateStatus(i + 1, status); // true = mở
+          });
+          print('🔧 Updated gate ${gate.name} (relay 3 - OPEN) status: ${status ? "OPEN" : "CLOSE"}');
+          return;
+        } else if (topic == 'NhaCuaToi_${gate.serial}_relay_4') {
+          // Relay 4 = đóng cổng phai 2
+          final status = message == 'on';
+          setState(() {
+            _pumpStation = _pumpStation.updateGateStatus(i + 1, !status); // false = đóng
+          });
+          print('🔧 Updated gate ${gate.name} (relay 4 - CLOSE) status: ${!status ? "CLOSE" : "OPEN"}');
+          return;
+        }
+      } else {
+        // Cổng phai khác: xử lý theo number ban đầu
+        final relayTopic = 'NhaCuaToi_${gate.serial}_relay_${gate.number}';
+        if (topic == relayTopic) {
+          final status = message == 'on';
+          setState(() {
+            _pumpStation = _pumpStation.updateGateStatus(i + 1, status);
+          });
+          print('🔧 Updated gate ${gate.name} (relay ${gate.number}) status: $status');
+          return;
+        }
       }
     }
 
@@ -502,50 +602,6 @@ class _PumpStationScreenState extends State<PumpStationScreen> {
         }
         return;
       }
-    }
-    
-    // 🧪 DEBUG: Handle test water level topic  
-    if (topic == 'NhaCuaToi_1948911026_mucnuoc') {
-      print('🧪 DEBUG: Received test water level message: $message');
-      try {
-        double waterLevel = 0.0;
-        
-        // Try parsing as JSON first
-        try {
-          final Map<String, dynamic> data = json.decode(message);
-          waterLevel = data['water_level']?.toDouble() ?? double.parse(message);
-          print('🧪 DEBUG: Parsed JSON water level: $waterLevel from: $data');
-        } catch (e) {
-          // If not JSON, parse as simple number
-          waterLevel = double.tryParse(message) ?? 0.0;
-          print('🧪 DEBUG: Parsed simple water level: $waterLevel from: $message');
-        }
-        
-        print('🧪 DEBUG: Test water level parsed successfully: ${waterLevel.toStringAsFixed(2)} cm');
-        
-        // Show snackbar để báo đã nhận được message
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('🧪 TEST: Nhận được cảm biến mức nước: ${waterLevel.toStringAsFixed(1)} cm'),
-              backgroundColor: Colors.blue,
-              duration: Duration(seconds: 3),
-            ),
-          );
-        }
-      } catch (e) {
-        print('🧪 DEBUG: Error parsing test water level: $e');
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('🧪 TEST ERROR: Lỗi parse message: $e'),
-              backgroundColor: Colors.red,
-              duration: Duration(seconds: 3),
-            ),
-          );
-        }
-      }
-      return;
     }
 
     // Handle flow sensor data theo cấu trúc firmware: NhaCuaToi_${pump.serial}_flow_status
@@ -595,6 +651,7 @@ class _PumpStationScreenState extends State<PumpStationScreen> {
               isClosed: isClosed,
               serial: updatedGates[i].serial,
               name: updatedGates[i].name,
+              connectionStatus: updatedGates[i].connectionStatus,
             );
           }
           _pumpStation = _pumpStation.copyWith(gates: updatedGates);
@@ -606,6 +663,104 @@ class _PumpStationScreenState extends State<PumpStationScreen> {
       return;
     }
     
+    // Handle device status messages
+    if (topic.endsWith('_status')) {
+      try {
+        print('🔔 Processing status message: $message');
+        final data = jsonDecode(message);
+        final serial = data['serial'];
+        final status = data['status'];
+        
+        print('🔔 Parsed data: serial=$serial, status=$status');
+        
+        if (serial != null && status != null) {
+          // Extract device serial from the full serial (remove "NhaCuaToi_" prefix)
+          String deviceSerial = serial.toString().replaceFirst('NhaCuaToi_', '');
+          
+          print('🔔 Looking for device with serial: $deviceSerial');
+          
+          // Update device connection status in database
+          DatabaseHelper.instance.updateDeviceConnectionStatus(deviceSerial, status);
+          
+          print('📡 Updated device connection status in database: $deviceSerial -> $status');
+          
+          // Define mapping between actual serials and pump/gate indices
+          final pumpSerials = ['9249022997', '9249022998']; // Serial numbers for pump 1 and 2
+          
+          // Update UI for sub-devices
+          bool foundDevice = false;
+          setState(() {
+            // Update pump connection status based on serial mapping
+            final updatedPumps = <PumpStatus>[];
+            for (int i = 0; i < _pumpStation.pumps.length; i++) {
+              final pump = _pumpStation.pumps[i];
+              final expectedSerial = i < pumpSerials.length ? pumpSerials[i] : pump.serial;
+              print('🔧 Checking pump ${i + 1}: expectedSerial=$expectedSerial vs deviceSerial=$deviceSerial');
+              if (expectedSerial == deviceSerial) {
+                updatedPumps.add(PumpStatus(
+                  id: pump.id,
+                  number: pump.number,
+                  isActive: pump.isActive,
+                  hasWater: pump.hasWater,
+                  serial: pump.serial,
+                  name: pump.name,
+                  connectionStatus: status,
+                ));
+                print('🔧 Updated pump ${i + 1} connection status: $status');
+                foundDevice = true;
+              } else {
+                updatedPumps.add(pump);
+              }
+            }
+            
+            // Update gate connection status based on serial mapping (gates use same serials as pumps)
+            final updatedGates = <GateStatus>[];
+            for (int i = 0; i < _pumpStation.gates.length; i++) {
+              final gate = _pumpStation.gates[i];
+              final expectedSerial = i < pumpSerials.length ? pumpSerials[i] : gate.serial;
+              print('🚪 Checking gate ${i + 1}: expectedSerial=$expectedSerial vs deviceSerial=$deviceSerial');
+              if (expectedSerial == deviceSerial) {
+                updatedGates.add(GateStatus(
+                  id: gate.id,
+                  number: gate.number,
+                  isOpen: gate.isOpen,
+                  isClosed: gate.isClosed,
+                  serial: gate.serial,
+                  name: gate.name,
+                  connectionStatus: status,
+                ));
+                print('🚪 Updated gate ${i + 1} connection status: $status');
+                foundDevice = true;
+              } else {
+                updatedGates.add(gate);
+              }
+            }
+            
+            // Update water sensor connection status
+            for (int i = 0; i < _waterSensors.length; i++) {
+              print('💧 Checking water sensor ${i + 1}: serial=${_waterSensors[i].deviceSerial} vs deviceSerial=$deviceSerial');
+              if (_waterSensors[i].deviceSerial == deviceSerial) {
+                _waterSensors[i] = _waterSensors[i].copyWith(connectionStatus: status);
+                print('💧 Updated water sensor ${i + 1} connection status: $status');
+                foundDevice = true;
+                break;
+              }
+            }
+            
+            _pumpStation = _pumpStation.copyWith(pumps: updatedPumps, gates: updatedGates);
+            
+            if (foundDevice) {
+              print('✅ Successfully updated device status: $deviceSerial -> $status');
+            } else {
+              print('⚠️ No matching device found for serial: $deviceSerial');
+            }
+          });
+        }
+      } catch (e) {
+        print('❌ Error parsing status message: $e');
+      }
+      return;
+    }
 
   }
   
@@ -709,8 +864,9 @@ class _PumpStationScreenState extends State<PumpStationScreen> {
     String command;
     
     // Mỗi máy bơm có 2 relay: 1 để bật, 1 để tắt
+    // THAY ĐỔI LOGIC: Khi nút hiển thị "BẬT" gửi "OFF", khi nút "TẮT" gửi "ON"
     if (newStatus) {
-      // Bật máy bơm
+      // Máy sẽ bật (nút hiện tại hiển thị "BẬT") → gửi lệnh OFF
       if (pump.number == 1) {
         relayNumber = 1; // Máy 1 bật → relay 1
       } else if (pump.number == 2) {
@@ -718,8 +874,9 @@ class _PumpStationScreenState extends State<PumpStationScreen> {
       } else {
         relayNumber = pump.number; // Các máy khác
       }
+      command = 'off'; // Gửi 'off' khi nút hiển thị "BẬT"
     } else {
-      // Tắt máy bơm
+      // Máy sẽ tắt (nút hiện tại hiển thị "TẮT") → gửi lệnh ON
       if (pump.number == 1) {
         relayNumber = 2; // Máy 1 tắt → relay 2
       } else if (pump.number == 2) {
@@ -727,8 +884,8 @@ class _PumpStationScreenState extends State<PumpStationScreen> {
       } else {
         relayNumber = pump.number; // Các máy khác
       }
+      command = 'on'; // Gửi 'on' khi nút hiển thị "TẮT"
     }
-    command = 'on'; // Luôn gửi 'on' để bật/tắt relay
     
     // Topic sử dụng serial + relay: NhaCuaToi_serial_relay_number
     final topic = 'NhaCuaToi_${pump.serial}_relay_$relayNumber';
@@ -741,7 +898,7 @@ class _PumpStationScreenState extends State<PumpStationScreen> {
       pump.serial,
       pump.number,
       relayNumber, // Sử dụng relayNumber để phân biệt từng nút bật/tắt
-      true, // Luôn lưu true vì ta luôn gửi lệnh 'on' cho relay
+      command == 'on', // Lưu true nếu command là 'on', false nếu command là 'off'
     );
     
     // Riêng với máy 3+, ta cần lưu thêm trạng thái thực tế của máy
@@ -786,8 +943,9 @@ class _PumpStationScreenState extends State<PumpStationScreen> {
     String command;
     
     // Mỗi cống phai có 2 relay: 1 để mở, 1 để đóng
+    // THAY ĐỔI LOGIC: Khi nút hiển thị "MỞ" gửi "OFF", khi nút "ĐÓNG" gửi "ON"
     if (newStatus) {
-      // Mở cống phai
+      // Cống sẽ mở (nút hiện tại hiển thị "MỞ") → gửi lệnh OFF
       if (gate.number == 1) {
         relayNumber = 1; // Cống 1 mở → relay 1
       } else if (gate.number == 2) {
@@ -795,8 +953,9 @@ class _PumpStationScreenState extends State<PumpStationScreen> {
       } else {
         relayNumber = gate.number; // Các cống khác
       }
+      command = 'off'; // Gửi 'off' khi nút hiển thị "MỞ"
     } else {
-      // Đóng cống phai
+      // Cống sẽ đóng (nút hiện tại hiển thị "ĐÓNG") → gửi lệnh ON
       if (gate.number == 1) {
         relayNumber = 2; // Cống 1 đóng → relay 2
       } else if (gate.number == 2) {
@@ -804,8 +963,8 @@ class _PumpStationScreenState extends State<PumpStationScreen> {
       } else {
         relayNumber = gate.number; // Các cống khác
       }
+      command = 'on'; // Gửi 'on' khi nút hiển thị "ĐÓNG"
     }
-    command = 'on'; // Luôn gửi 'on' để bật/tắt relay
     
     // Topic sử dụng serial + relay: NhaCuaToi_serial_relay_number
     final topic = 'NhaCuaToi_${gate.serial}_relay_$relayNumber';
@@ -818,7 +977,7 @@ class _PumpStationScreenState extends State<PumpStationScreen> {
       gate.serial,
       gate.number,
       relayNumber, // Sử dụng relayNumber để phân biệt từng nút mở/đóng
-      true, // Luôn lưu true vì ta luôn gửi lệnh 'on' cho relay
+      command == 'on', // Lưu true nếu command là 'on', false nếu command là 'off'
     );
     
     // Riêng với cống 3+, ta cần lưu thêm trạng thái thực tế của cống
@@ -841,11 +1000,37 @@ class _PumpStationScreenState extends State<PumpStationScreen> {
     print('⏰ Set cooldown for gate ${index + 1} for 3 seconds');
   }
 
+  // Helper methods for connection status
+  Color _getConnectionStatusColor(String status) {
+    switch (status) {
+      case 'online':
+        return Colors.green;
+      case 'offline':
+        return Colors.red;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  IconData _getConnectionStatusIcon(String status) {
+    switch (status) {
+      case 'online':
+        return Icons.wifi;
+      case 'offline':
+        return Icons.wifi_off;
+      default:
+        return Icons.help_outline;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Trạm Bơm Thông...'),
+        title: Text(
+          'Trạm Bơm ${widget.device.deviceName}',
+          overflow: TextOverflow.ellipsis,
+        ),
         backgroundColor: Colors.blue[600],
         foregroundColor: Colors.white,
         leading: IconButton(
@@ -1057,20 +1242,38 @@ class _PumpStationScreenState extends State<PumpStationScreen> {
               children: [
                 // Header with icon and name
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Icon(
-                      Icons.waves,
-                      size: 18, // Giảm icon size
-                      color: Colors.blue[600],
+                    // Main info section
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.waves,
+                          size: 18, // Giảm icon size
+                          color: Colors.blue[600],
+                        ),
+                        SizedBox(width: 4),
+                        Text(
+                          pump.name.isNotEmpty ? pump.name : 'Máy Bơm ${pump.number}',
+                          style: TextStyle(
+                            fontSize: 13, // Giảm font size
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black87,
+                          ),
+                        ),
+                      ],
                     ),
-                    SizedBox(width: 4),
-                    Text(
-                      pump.name.isNotEmpty ? pump.name : 'Máy Bơm ${pump.number}',
-                      style: TextStyle(
-                        fontSize: 13, // Giảm font size
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black87,
+                    // Connection status indicator
+                    Container(
+                      padding: const EdgeInsets.all(2),
+                      decoration: BoxDecoration(
+                        color: _getConnectionStatusColor(pump.connectionStatus),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Icon(
+                        _getConnectionStatusIcon(pump.connectionStatus),
+                        color: Colors.white,
+                        size: 12,
                       ),
                     ),
                   ],
@@ -1148,20 +1351,38 @@ class _PumpStationScreenState extends State<PumpStationScreen> {
               children: [
                 // Header with icon and name
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Icon(
-                      Icons.door_front_door,
-                      size: 18, // Giảm icon size
-                      color: Colors.orange[600],
+                    // Main info section
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.door_front_door,
+                          size: 18, // Giảm icon size
+                          color: Colors.orange[600],
+                        ),
+                        SizedBox(width: 4),
+                        Text(
+                          gate.name.isNotEmpty ? gate.name : 'Cổng Phai ${gate.number}',
+                          style: TextStyle(
+                            fontSize: 13, // Giảm font size
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black87,
+                          ),
+                        ),
+                      ],
                     ),
-                    SizedBox(width: 4),
-                    Text(
-                      gate.name.isNotEmpty ? gate.name : 'Cổng Phai ${gate.number}',
-                      style: TextStyle(
-                        fontSize: 13, // Giảm font size
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black87,
+                    // Connection status indicator
+                    Container(
+                      padding: const EdgeInsets.all(2),
+                      decoration: BoxDecoration(
+                        color: _getConnectionStatusColor(gate.connectionStatus),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Icon(
+                        _getConnectionStatusIcon(gate.connectionStatus),
+                        color: Colors.white,
+                        size: 12,
                       ),
                     ),
                   ],

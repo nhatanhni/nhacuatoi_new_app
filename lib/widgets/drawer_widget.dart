@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:fluttertoast/fluttertoast.dart';
+// import 'package:fluttertoast/fluttertoast.dart';
 import 'package:iot_app/repository/user_repository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -180,14 +180,15 @@ class _AppDrawerState extends State<AppDrawer> {
                           // clear user data and login status
                           userRepository.clearUserData();
                           userRepository.clearLoginStatus();
-                          Fluttertoast.showToast(
-                              msg: "Đăng xuất thành công!",
-                              toastLength: Toast.LENGTH_SHORT,
-                              gravity: ToastGravity.BOTTOM,
-                              timeInSecForIosWeb: 1,
-                              backgroundColor: Theme.of(context).primaryColor,
-                              textColor: Colors.white,
-                              fontSize: 16.0);
+                          // Fluttertoast.showToast(
+                          //     msg: "Đăng xuất thành công!",
+                          //     toastLength: Toast.LENGTH_SHORT,
+                          //     gravity: ToastGravity.BOTTOM,
+                          //     timeInSecForIosWeb: 1,
+                          //     backgroundColor: Theme.of(context).primaryColor,
+                          //     textColor: Colors.white,
+                          //     fontSize: 16.0);
+                          print("Đăng xuất thành công!");
                           // then navigate to login screen
                           Navigator.of(context).pop();
                           Navigator.pushNamedAndRemoveUntil(

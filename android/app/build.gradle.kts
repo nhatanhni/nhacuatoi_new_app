@@ -36,8 +36,8 @@ android {
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = 21
         targetSdk = 35
-        versionCode = 17
-        versionName = "2.0.8"
+        versionCode = 18
+        versionName = "2.1.0"
         
         // Android 15 specific configurations
         ndk {
@@ -45,24 +45,40 @@ android {
         }
     }
 
-    signingConfigs {
-        create("release") {
-            keyAlias = keystoreProperties["keyAlias"] as String
-            keyPassword = keystoreProperties["keyPassword"] as String
-            storeFile = keystoreProperties["storeFile"]?.let { file("$it") }
-            storePassword = keystoreProperties["storePassword"] as String
+    // Chỉ cấu hình signing release nếu có file key.properties.
+    if (keystorePropertiesFile.exists()) {
+        signingConfigs {
+            create("release") {
+                keyAlias = keystoreProperties["keyAlias"] as String
+                keyPassword = keystoreProperties["keyPassword"] as String
+                storeFile = keystoreProperties["storeFile"]?.let { file("$it") }
+                storePassword = keystoreProperties["storePassword"] as String
+            }
         }
-    }
-    buildTypes {
-        release {
-            signingConfig = signingConfigs.getByName("release")
-            isMinifyEnabled = false
-            isShrinkResources = false
-            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+        buildTypes {
+            release {
+                signingConfig = signingConfigs.getByName("release")
+                isMinifyEnabled = false
+                isShrinkResources = false
+                proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            }
+            debug {
+                isMinifyEnabled = false
+                isShrinkResources = false
+            }
         }
-        debug {
-            isMinifyEnabled = false
-            isShrinkResources = false
+    } else {
+        // Không có keystore: vẫn cho phép build debug / release (unsigned).
+        buildTypes {
+            release {
+                isMinifyEnabled = false
+                isShrinkResources = false
+                proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            }
+            debug {
+                isMinifyEnabled = false
+                isShrinkResources = false
+            }
         }
     }
     

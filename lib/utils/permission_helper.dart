@@ -1,5 +1,43 @@
 import 'package:flutter/material.dart';
-import 'package:permission_handler/permission_handler.dart';
+// import 'package:permission_handler/permission_handler.dart';
+
+// Temporary placeholder for permission handling during iOS development
+enum Permission {
+  camera,
+  location,
+  locationWhenInUse,
+  nearbyWifiDevices,
+}
+
+extension PermissionSingleExtension on Permission {
+  Future<PermissionStatus> request() async {
+    // Temporary implementation - return granted for all permissions
+    return PermissionStatus.granted;
+  }
+  
+  Future<PermissionStatus> get status async {
+    // Temporary implementation - return granted for all permissions
+    return PermissionStatus.granted;
+  }
+}
+
+enum PermissionStatus {
+  granted,
+  denied,
+  restricted,
+  permanentlyDenied,
+}
+
+extension PermissionExtension on List<Permission> {
+  Future<Map<Permission, PermissionStatus>> request() async {
+    // Temporary implementation - return granted for all permissions
+    Map<Permission, PermissionStatus> result = {};
+    for (Permission permission in this) {
+      result[permission] = PermissionStatus.granted;
+    }
+    return result;
+  }
+}
 
 class PermissionHelper {
   static Future<bool> checkAndRequestPermissions(BuildContext context) async {
@@ -111,4 +149,11 @@ class PermissionHelper {
       ),
     );
   }
+}
+
+// Global function for opening app settings
+Future<bool> openAppSettings() async {
+  // Temporary implementation - just print for now
+  print('📱 Opening app settings...');
+  return true;
 }

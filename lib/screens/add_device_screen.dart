@@ -5,7 +5,7 @@ import 'dart:io';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import '../models/device.dart';
-import '../database/database_helper.dart';
+import '../database/database_helper.dart' if (dart.library.html) '../database/web_database_helper.dart';
 import '../widgets/appbar_back_to_home_widget.dart';
 import '../widgets/appbar_dropdown_widget.dart';
 import '../widgets/custom_button_widget.dart';

@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
 import '../widgets/appbar_dropdown_widget.dart';
 import '../widgets/drawer_widget.dart';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import '../database/database_helper.dart';
+// import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import '../database/database_helper.dart' if (dart.library.html) '../database/web_database_helper.dart';
 import '../models/device.dart';
 import 'device_detail_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../main.dart';
 
 import '../repository/mqtt_manager.dart';
 
@@ -17,37 +16,22 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> with RouteAware {
+class _HomeScreenState extends State<HomeScreen> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
-  final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
+  // final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
 
   @override
   void initState() {
     super.initState();
-    _initializeNotifications();
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    MyApp.routeObserver.subscribe(this, ModalRoute.of(context)!);
-  }
-
-  @override
-  void dispose() {
-    MyApp.routeObserver.unsubscribe(this);
-    super.dispose();
-  }
-
-  @override
-  void didPopNext() {
-    // Kiểm tra trạng thái thông báo khi quay trở lại HomeScreen
+    // _initializeNotifications();
+    // Khi vào HomeScreen, kiểm tra trạng thái thông báo và khởi tạo MQTT một lần
     _checkNotificationState();
-    // Kết nối lại với MQTT khi quay trở lại HomeScreen
     _initializeMQTT();
   }
 
   Future<void> _initializeNotifications() async {
+    // Temporarily disabled due to flutter_local_notifications iOS compatibility issues
+    /*
     const AndroidInitializationSettings initializationSettingsAndroid = AndroidInitializationSettings('@mipmap/ic_launcher');
     final DarwinInitializationSettings initializationSettingsIOS = DarwinInitializationSettings();
     final InitializationSettings initializationSettings = InitializationSettings(
@@ -61,6 +45,7 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
         _selectNotification(response.payload);
       },
     );
+    */
   }
 
   Future<void> _selectNotification(String? payload) async {
@@ -75,9 +60,9 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
       final device = await DatabaseHelper.instance.queryDeviceBySerial(payload);
 
       // Kiểm tra xem device có phải là null không
-      if (device != null) {
+      if (device != null && mounted) {
         print('Navigating to DeviceDetailScreen with device: ${device.deviceSerial}');
-        Navigator.of(MyApp.navigatorKey.currentContext!).push(
+        Navigator.of(context).push(
           MaterialPageRoute(
             builder: (context) => DeviceDetailScreen(device: device),
           ),
@@ -96,11 +81,11 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
     final prefs = await SharedPreferences.getInstance();
     final notificationPayload = prefs.getString('notification_payload');
 
-    if (notificationPayload != null) {
+    if (notificationPayload != null && mounted) {
       // Điều hướng đến màn hình chi tiết thiết bị với payload đã lưu
       final device = await DatabaseHelper.instance.queryDeviceBySerial(notificationPayload);
       if (device != null) {
-        Navigator.of(MyApp.navigatorKey.currentContext!).push(
+        Navigator.of(context).push(
           MaterialPageRoute(
             builder: (context) => DeviceDetailScreen(device: device),
           ),
@@ -138,25 +123,87 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
         ],
       ),
       drawer: const AppDrawer(),
-      body: Center(
-        child: Column(
-          children: <Widget>[
-            Expanded(
-              child: Container(
-                width: MediaQuery.of(context).size.width, // Giảm chiều rộng tổng cộng 10px
-                margin: const EdgeInsets.only(bottom: 10),
-                child: Transform.translate(
-                  offset: const Offset(0, 13), // Di chuyển ảnh xuống 5px
-                  child: Image.asset(
-                    'assets/images/home-1.png',
-                    fit: BoxFit.cover,
-                    alignment: Alignment.bottomCenter,
-                  ),
+      body: Column(
+        children: <Widget>[
+          // Phần banner hình ảnh
+          Expanded(
+            child: Container(
+              width: MediaQuery.of(context).size.width,
+              margin: const EdgeInsets.only(bottom: 10),
+              child: Transform.translate(
+                offset: const Offset(0, 13),
+                child: Image.asset(
+                  'assets/images/home-1.png',
+                  fit: BoxFit.cover,
+                  alignment: Alignment.bottomCenter,
                 ),
               ),
             ),
-          ],
-        ),
+          ),
+          // Phần nút chức năng nhanh (menu chính)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Text(
+                  'Chức năng nhanh',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 12,
+                  children: [
+                    SizedBox(
+                      width: (MediaQuery.of(context).size.width - 40) / 2,
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          Navigator.pushNamed(context, '/device_list');
+                        },
+                        icon: const Icon(Icons.devices_outlined),
+                        label: const Text('Danh sách thiết bị'),
+                      ),
+                    ),
+                    SizedBox(
+                      width: (MediaQuery.of(context).size.width - 40) / 2,
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          Navigator.pushNamed(context, '/add_device');
+                        },
+                        icon: const Icon(Icons.add_circle),
+                        label: const Text('Thêm thiết bị'),
+                      ),
+                    ),
+                    SizedBox(
+                      width: (MediaQuery.of(context).size.width - 40) / 2,
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          Navigator.pushNamed(context, '/manage_device');
+                        },
+                        icon: const Icon(Icons.settings),
+                        label: const Text('Quản lý thiết bị'),
+                      ),
+                    ),
+                    SizedBox(
+                      width: (MediaQuery.of(context).size.width - 40) / 2,
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          Navigator.pushNamed(context, '/wifi_setup');
+                        },
+                        icon: const Icon(Icons.wifi_protected_setup),
+                        label: const Text('Cài đặt WiFi thiết bị'),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

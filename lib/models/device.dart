@@ -8,6 +8,7 @@ class Device {
   String? sensorType; // temperature or humidity
   int? sensorThreshold; // threshold for sensor
   int deviceStatus;
+  String connectionStatus; // "online", "offline", "unknown"
   int hasSchedule = 0;
   DateTime? scheduleTime;
   int? scheduleDuration;
@@ -20,6 +21,7 @@ class Device {
     this.sensorType,
     this.sensorThreshold,
     required this.deviceStatus,
+    this.connectionStatus = "unknown",
     this.hasSchedule = 0,
     this.scheduleTime,
     this.scheduleDuration,
@@ -37,6 +39,7 @@ class Device {
       'sensorType': sensorType,
       'sensorThreshold': sensorThreshold,
       'deviceStatus': deviceStatus,
+      'connectionStatus': connectionStatus,
       'hasSchedule': hasSchedule,
       'scheduleTime': scheduleTime?.toIso8601String(),
       'scheduleDuration': scheduleDuration,
@@ -53,6 +56,7 @@ class Device {
         sensorType = map['sensorType'],
         sensorThreshold = map['sensorThreshold'],
         deviceStatus = map['deviceStatus'],
+        connectionStatus = map['connectionStatus'] ?? "unknown",
         hasSchedule = map['hasSchedule'],
         scheduleTime = map['scheduleTime'] != null
             ? DateTime(
@@ -176,6 +180,7 @@ class WaterLevelSensor {
   final DateTime lastUpdate;
   final bool isActive;
   final int? parentDeviceId;
+  final String connectionStatus; // "online", "offline", "unknown"
 
   WaterLevelSensor({
     this.id,
@@ -188,6 +193,7 @@ class WaterLevelSensor {
     required this.lastUpdate,
     required this.isActive,
     this.parentDeviceId,
+    this.connectionStatus = 'unknown',
   });
 
   // Tạo sensor mực nước mặc định
@@ -202,6 +208,7 @@ class WaterLevelSensor {
       lastUpdate: DateTime.now(),
       isActive: true,
       parentDeviceId: parentDeviceId,
+      connectionStatus: 'unknown',
     );
   }
 
@@ -246,6 +253,7 @@ class WaterLevelSensor {
       lastUpdate: DateTime.now(),
       isActive: isActive,
       parentDeviceId: parentDeviceId,
+      connectionStatus: connectionStatus,
     );
   }
 
@@ -261,6 +269,7 @@ class WaterLevelSensor {
     DateTime? lastUpdate,
     bool? isActive,
     int? parentDeviceId,
+    String? connectionStatus,
   }) {
     return WaterLevelSensor(
       id: id ?? this.id,
@@ -273,6 +282,7 @@ class WaterLevelSensor {
       lastUpdate: lastUpdate ?? this.lastUpdate,
       isActive: isActive ?? this.isActive,
       parentDeviceId: parentDeviceId ?? this.parentDeviceId,
+      connectionStatus: connectionStatus ?? this.connectionStatus,
     );
   }
 
@@ -492,6 +502,7 @@ class PumpStatus {
   final bool hasWater;
   final String serial;
   final String name;
+  final String connectionStatus; // "online", "offline", "unknown"
 
   PumpStatus({
     this.id,
@@ -500,6 +511,7 @@ class PumpStatus {
     required this.hasWater,
     this.serial = '',
     this.name = '',
+    this.connectionStatus = 'unknown',
   });
 
   Map<String, dynamic> toMap() {
@@ -510,6 +522,7 @@ class PumpStatus {
       'hasWater': hasWater,
       'serial': serial,
       'name': name,
+      'connectionStatus': connectionStatus,
     };
   }
 
@@ -521,6 +534,7 @@ class PumpStatus {
       hasWater: map['hasWater'],
       serial: map['serial'] ?? '',
       name: map['name'] ?? '',
+      connectionStatus: map['connectionStatus'] ?? 'unknown',
     );
   }
 }
@@ -533,6 +547,7 @@ class GateStatus {
   final bool isClosed; // Trạng thái magnetic switch
   final String serial;
   final String name;
+  final String connectionStatus; // "online", "offline", "unknown"
 
   GateStatus({
     this.id,
@@ -541,6 +556,7 @@ class GateStatus {
     this.isClosed = false,
     this.serial = '',
     this.name = '',
+    this.connectionStatus = 'unknown',
   });
 
   Map<String, dynamic> toMap() {
@@ -551,6 +567,7 @@ class GateStatus {
       'isClosed': isClosed,
       'serial': serial,
       'name': name,
+      'connectionStatus': connectionStatus,
     };
   }
 
@@ -562,6 +579,7 @@ class GateStatus {
       isClosed: map['isClosed'] ?? false,
       serial: map['serial'] ?? '',
       name: map['name'] ?? '',
+      connectionStatus: map['connectionStatus'] ?? 'unknown',
     );
   }
 }

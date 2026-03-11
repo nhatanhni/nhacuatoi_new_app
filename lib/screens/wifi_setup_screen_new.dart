@@ -3,8 +3,10 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
-import 'package:qr_code_scanner/qr_code_scanner.dart';
-import 'package:permission_handler/permission_handler.dart';
+// import 'package:qr_code_scanner/qr_code_scanner.dart';
+import '../utils/qr_code_helper.dart';
+// import 'package:permission_handler/permission_handler.dart';
+import '../utils/permission_helper.dart';
 import 'package:wifi_scan/wifi_scan.dart';
 import 'package:http/http.dart' as http;
 import 'package:wifi_iot/wifi_iot.dart';
@@ -201,7 +203,7 @@ class _WiFiSetupScreenState extends State<WiFiSetupScreen> {
           child: ClipRRect(
             borderRadius: BorderRadius.circular(10),
             child: QRView(
-              key: qrKey,
+              qrKey: qrKey,
               onQRViewCreated: _onQRViewCreated,
               overlay: QrScannerOverlayShape(
                 borderColor: Colors.blue,

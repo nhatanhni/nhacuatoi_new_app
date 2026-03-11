@@ -29,10 +29,74 @@
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="favicon.png"/>
 
-  <title>new_iot_app</title>
+  <title>IoT Control App</title>
   <link rel="manifest" href="manifest.json">
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+      font-family: 'Roboto', sans-serif;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    
+    .loading {
+      text-align: center;
+      color: #1976d2;
+    }
+    
+    .loading h1 {
+      font-size: 2.5rem;
+      margin-bottom: 1rem;
+      color: #1565c0;
+    }
+    
+    .loading p {
+      font-size: 1.2rem;
+      margin-bottom: 2rem;
+      color: #1976d2;
+    }
+    
+    .spinner {
+      border: 4px solid #e3f2fd;
+      border-top: 4px solid #1976d2;
+      border-radius: 50%;
+      width: 50px;
+      height: 50px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    flutter-view {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+  </style>
 </head>
 <body>
+  <div class="loading" id="loading">
+    <h1>🏭 IoT Control App</h1>
+    <p>Đang tải ứng dụng quản lý thiết bị IoT...</p>
+    <div class="spinner"></div>
+  </div>
+  
+  <script>
+    window.addEventListener('flutter-first-frame', function () {
+      const loading = document.getElementById('loading');
+      if (loading) {
+        loading.style.display = 'none';
+      }
+    });
+  </script>
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>

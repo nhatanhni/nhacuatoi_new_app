@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:iot_app/models/device.dart';
-import 'package:iot_app/database/database_helper.dart';
+import 'package:iot_app/database/database_helper.dart' if (dart.library.html) 'package:iot_app/database/web_database_helper.dart';
 
 class PumpStationManagementScreen extends StatefulWidget {
   final PumpStationDevice pumpStation;

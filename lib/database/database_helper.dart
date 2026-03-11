@@ -8,7 +8,7 @@ import 'package:path/path.dart';
 
 class DatabaseHelper {
   static final _databaseName = "iotapp.db";
-  static final _databaseVersion = 9;
+  static final _databaseVersion = 10;
 
   static final tableDevices = 'smart_device';
   static final tableSwitchEvents = 'switchEvents';
@@ -26,6 +26,7 @@ class DatabaseHelper {
   static final columnSensorType = 'sensorType';
   static final columnSensorThreshold = 'sensorThreshold';
   static final columnDeviceStatus = 'deviceStatus';
+  static final columnConnectionStatus = 'connectionStatus';
   static final columnHasSchedule = 'hasSchedule';
   static final columnScheduleTime = 'scheduleTime';
   static final columnScheduleDuration = 'scheduleDuration';
@@ -253,6 +254,10 @@ class DatabaseHelper {
         ''');
       }
     }
+    if (oldVersion < 10) {
+      // Thêm cột connectionStatus vào bảng smart_device
+      await db.execute('ALTER TABLE $tableDevices ADD COLUMN $columnConnectionStatus TEXT NOT NULL DEFAULT "unknown"');
+    }
   }
 
   Future _onCreate(Database db, int version) async {
@@ -265,6 +270,7 @@ class DatabaseHelper {
             $columnSensorType TEXT,
             $columnSensorThreshold INTEGER,
             $columnDeviceStatus BOOLEAN NOT NULL,
+            $columnConnectionStatus TEXT NOT NULL DEFAULT 'unknown',
             $columnHasSchedule BOOLEAN NOT NULL DEFAULT 0,
             $columnScheduleTime TEXT,
             $columnScheduleDuration INTEGER,
@@ -484,6 +490,13 @@ class DatabaseHelper {
     }
 
     return result;
+  }
+
+  // update a device's connection status given its serial
+  Future<int> updateDeviceConnectionStatus(String deviceSerial, String connectionStatus) async {
+    Database db = await instance.database;
+    return await db.update(tableDevices, {'connectionStatus': connectionStatus},
+        where: '$columnDeviceSerial = ?', whereArgs: [deviceSerial]);
   }
 
   static Future<int> updateDeviceStatusAndLogEvent(int id, int status) async {

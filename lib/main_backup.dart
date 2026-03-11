@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -13,18 +12,20 @@ import 'package:iot_app/screens/add_device_screen.dart';
 import 'package:iot_app/screens/login_screen.dart';
 import 'package:iot_app/screens/manage_device_screen.dart';
 import 'package:iot_app/screens/device_detail_screen.dart';
+import 'package:iot_app/screens/wifi_setup_screen.dart';
 import 'package:iot_app/models/device.dart';
-import 'package:android_alarm_manager_plus/android_alarm_manager_plus.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:iot_app/screens/register_screen.dart';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:mqtt_client/mqtt_client.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:workmanager/workmanager.dart';
 import 'package:iot_app/screens/pump_station_screen.dart';
-
-import 'database/database_helper.dart';
+import 'database/database_helper.dart' if (dart.library.html) 'database/web_database_helper.dart';
 import 'widgets/notification_service.dart';
+
+// Conditional imports for mobile-only packages
+import 'dart:io' if (dart.library.html) 'dart:html';
+import 'package:android_alarm_manager_plus/android_alarm_manager_plus.dart';
+import 'package:workmanager/workmanager.dart';
 
 @pragma('vm:entry-point')
 void callbackDispatcher() {
@@ -42,7 +43,8 @@ void callbackDispatcher() {
   });
 }
 
-void _showNotification(String message, FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin) async {
+// void _showNotification(String message, FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin) async {
+void _showNotification(String message, dynamic flutterLocalNotificationsPlugin) async {
   final notificationService = NotificationService();
   await notificationService.showNotification('Thông báo', message);
 }
@@ -88,56 +90,46 @@ Future<String?> _getNotificationState() async {
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
-  // Only load dotenv on mobile platforms
   if (!kIsWeb) {
-    await dotenv.load();
-  }
-
-  if (!kIsWeb && Platform.isAndroid) {
-    await AndroidAlarmManager.initialize();
-  }
-
-  // Only initialize Workmanager on mobile platforms
-  if (!kIsWeb) {
-    Workmanager().initialize(callbackDispatcher, isInDebugMode: true);
-
     try {
+      await dotenv.load();
+      await AndroidAlarmManager.initialize();
+      
+      Workmanager().initialize(callbackDispatcher, isInDebugMode: true);
+      
       await Workmanager().registerPeriodicTask(
         "1",
         "simpleTask",
         frequency: Duration(minutes: 15),
       );
     } catch (e) {
-      print('Error registering Workmanager task: $e');
+      print('Mobile initialization error: $e');
+    }
+    
+    try {
+      SystemChrome.setEnabledSystemUIMode(
+        SystemUiMode.edgeToEdge,
+        overlays: [SystemUiOverlay.top, SystemUiOverlay.bottom],
+      );
+      
+      SystemChrome.setSystemUIOverlayStyle(
+        const SystemUiOverlayStyle(
+          statusBarIconBrightness: Brightness.dark,
+          systemNavigationBarIconBrightness: Brightness.dark,
+          systemNavigationBarContrastEnforced: false,
+          systemStatusBarContrastEnforced: false,
+          systemNavigationBarDividerColor: null,
+        ),
+      );
+    } catch (e) {
+      print('SystemChrome error: $e');
     }
   }
 
-  // Enable edge-to-edge display for Android 15 compatibility
-  if (!kIsWeb && Platform.isAndroid) {
-    // Use new API for Android 15 - avoid deprecated setStatusBarColor, etc.
-    SystemChrome.setEnabledSystemUIMode(
-      SystemUiMode.edgeToEdge,
-      overlays: [SystemUiOverlay.top, SystemUiOverlay.bottom],
-    );
-    
-    // Set system UI overlay style with new properties for Android 15
-    // Completely avoid deprecated properties: statusBarColor, systemNavigationBarColor, systemNavigationBarDividerColor
-    SystemChrome.setSystemUIOverlayStyle(
-      const SystemUiOverlayStyle(
-        // Only use non-deprecated properties for Android 15
-        statusBarIconBrightness: Brightness.dark,
-        systemNavigationBarIconBrightness: Brightness.dark,
-        // Android 15 specific properties - avoid deprecated color properties
-        systemNavigationBarContrastEnforced: false,
-        systemStatusBarContrastEnforced: false,
-        // Use new properties for edge-to-edge
-        systemNavigationBarDividerColor: null, // Explicitly set to null to avoid deprecated API
-      ),
-    );
-  }
+  SharedPreferences prefs = await SharedPreferences.getInstance();
+  String accessToken = prefs.getString('accessToken') ?? '';
 
-  // Luôn khởi động vào màn hình chính (Home) thay vì điều hướng theo accessToken
-  runApp(const MyApp(initialRoute: '/'));
+  runApp(MyApp(initialRoute: accessToken.isEmpty ? '/login' : '/'));
 }
 
 class MyApp extends StatefulWidget {
@@ -254,7 +246,7 @@ class _MyAppState extends State<MyApp> {
               '/device_list': (context) => DeviceListScreen(),
               '/user_list': (context) => UserListScreen(),
               '/home': (context) => HomeScreen(),
-
+              '/wifi_setup': (context) => WiFiSetupScreen(),
             },
             navigatorObservers: [MyApp.routeObserver],
             onGenerateRoute: (settings) {

@@ -7,7 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:iot_app/models/device.dart';
 import 'package:iot_app/models/switch_event.dart';
-import 'package:iot_app/database/database_helper.dart';
+import 'package:iot_app/database/database_helper.dart' if (dart.library.html) 'package:iot_app/database/web_database_helper.dart';
 import 'package:iot_app/repository/mqtt_manager.dart';
 import 'package:iot_app/widgets/device_alarm_widget.dart';
 import 'package:iot_app/widgets/device_sensor_reading_widget.dart';

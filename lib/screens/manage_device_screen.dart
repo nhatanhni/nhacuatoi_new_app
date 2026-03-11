@@ -2,10 +2,11 @@
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:fluttertoast/fluttertoast.dart';
+// import 'package:fluttertoast/fluttertoast.dart';
+import '../utils/toast_helper.dart';
 import 'dart:io';
 import 'package:iot_app/models/device.dart';
-import 'package:iot_app/database/database_helper.dart';
+import 'package:iot_app/database/database_helper.dart' if (dart.library.html) 'package:iot_app/database/web_database_helper.dart';
 import 'package:iot_app/screens/device_detail_screen.dart';
 import 'package:iot_app/widgets/appbar_back_to_home_widget.dart';
 import 'package:iot_app/widgets/appbar_dropdown_widget.dart';

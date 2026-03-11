@@ -1,5 +1,7 @@
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+// import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
+// Temporarily disabled NotificationService due to flutter_local_notifications iOS compatibility issues
+/*
 class NotificationService {
   final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
   FlutterLocalNotificationsPlugin();
@@ -33,5 +35,16 @@ class NotificationService {
       body,
       platformChannelSpecifics,
     );
+  }
+}
+*/
+
+// Placeholder class to maintain code compatibility
+class NotificationService {
+  NotificationService();
+  
+  Future<void> showNotification(String title, String body) async {
+    // Placeholder - notifications temporarily disabled
+    print('Notification: $title - $body');
   }
 }

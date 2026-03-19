@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 // import 'package:fluttertoast/fluttertoast.dart';
 import '../utils/toast_helper.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:url_launcher/url_launcher.dart'; // Import package for launching URLs
-import 'package:iot_app/repository/api_service.dart';
-import 'package:iot_app/repository/user_repository.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:iot_app/bloc/auth/auth_bloc.dart';
+import 'package:iot_app/bloc/auth/auth_event.dart';
+import 'package:iot_app/bloc/auth/auth_state.dart';
+import 'package:iot_app/core/config/app_config.dart';
 
 class LoginScreen extends StatefulWidget {
   LoginScreen({Key? key}) : super(key: key);
@@ -19,17 +21,11 @@ class _LoginScreenState extends State<LoginScreen> {
   final FocusNode _passwordFocusNode = FocusNode();
 
   bool _isButtonTapped = false;
-  bool _isAgreed = false; // Trạng thái của checkbox
-
-  bool _isLoginError = false;
-  String _errorText = '';
-
-  final _apiService = ApiService();
-  final _userRepository = UserRepository();
+  bool _isAgreed = false;
 
   // Function to launch the privacy policy URL
   void _launchPrivacyPolicy() async {
-    const url = 'http://nhacuatoi.com.vn:5001/index.php/services/privacy';
+    final url = AppConfig.privacyPolicyUrl;
     if (await canLaunch(url)) {
       await launch(url);
     } else {
@@ -37,7 +33,7 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  Future<void> _login() async {
+  void _login() {
     final username = _usernameController.text;
     final password = _passwordController.text;
 
@@ -46,51 +42,10 @@ class _LoginScreenState extends State<LoginScreen> {
       return;
     }
 
-    setState(() {
-      _isButtonTapped = true;
-    });
-
-    try {
-      final result = await _apiService.login(username, password);
-      final data = result['Data'];
-
-      if (data != null) {
-        final accessToken = data['AccessToken'] as String?;
-        final userId = data['UserId'] as String?;
-        final userName = data['UserName'] as String?;
-
-        await _userRepository.saveUserData(data);
-        await _userRepository.saveLoginStatus(true);
-
-        SharedPreferences prefs = await SharedPreferences.getInstance();
-        await prefs.setString('accessToken', accessToken ?? '');
-
-        Fluttertoast.showToast(
-          msg: "Đăng nhập thành công!",
-          toastLength: Toast.LENGTH_SHORT,
-          gravity: ToastGravity.BOTTOM,
-          timeInSecForIosWeb: 1,
-          backgroundColor: Colors.green,
-          textColor: Colors.white,
-          fontSize: 16.0,
-        );
-
-        Navigator.pushNamed(context, '/home');
-      } else {
-        throw Exception('Dữ liệu trả về không hợp lệ.');
-      }
-    } catch (e) {
-      setState(() {
-        _isLoginError = true;
-        _errorText = e.toString().replaceFirst('Exception: ', '');
-      });
-
-      _showAlertDialog('Lỗi đăng nhập', 'Chi tiết: $_errorText');
-    } finally {
-      setState(() {
-        _isButtonTapped = false;
-      });
-    }
+    context.read<AuthBloc>().add(AuthLoginRequested(
+      username: username,
+      password: password,
+    ));
   }
 
   void _showAlertDialog(String title, String message) {
@@ -119,153 +74,184 @@ class _LoginScreenState extends State<LoginScreen> {
       onTap: () {
         FocusScope.of(context).unfocus();
       },
-      child: Scaffold(
-        body: SingleChildScrollView(
-          child: Container(
-            width: double.infinity,
-            height: MediaQuery.of(context).size.height,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [Colors.blue, Colors.blueAccent],
+      child: BlocListener<AuthBloc, AuthState>(
+        listener: (context, state) {
+          if (state is AuthLoading) {
+            setState(() => _isButtonTapped = true);
+          } else if (state is AuthAuthenticated) {
+            setState(() => _isButtonTapped = false);
+            Fluttertoast.showToast(
+              msg: "Đăng nhập thành công!",
+              toastLength: Toast.LENGTH_SHORT,
+              gravity: ToastGravity.BOTTOM,
+              timeInSecForIosWeb: 1,
+              backgroundColor: Colors.green,
+              textColor: Colors.white,
+              fontSize: 16.0,
+            );
+            Navigator.pushNamed(context, '/home');
+          } else if (state is AuthFailure) {
+            setState(() => _isButtonTapped = false);
+            _showAlertDialog('Lỗi đăng nhập', 'Chi tiết: ${state.message}');
+          }
+        },
+        child: Scaffold(
+          body: SingleChildScrollView(
+            child: Container(
+              width: double.infinity,
+              height: MediaQuery.of(context).size.height,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [Colors.blue, Colors.blueAccent],
+                ),
               ),
-            ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: <Widget>[
-                const SizedBox(height: 30),
-                CircleAvatar(
-                  radius: 60,
-                  backgroundColor: Colors.white,
-                  child: Text(
-                    'NCT',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 50,
-                      color: Colors.blue,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: <Widget>[
+                  const SizedBox(height: 30),
+                  CircleAvatar(
+                    radius: 60,
+                    backgroundColor: Colors.white,
+                    child: Text(
+                      'NCT',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 50,
+                        color: Colors.blue,
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(height: 30),
-                Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 20),
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(20),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black12,
-                        blurRadius: 5,
-                        spreadRadius: 2,
-                        offset: const Offset(0, 3),
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    children: <Widget>[
-                      TextField(
-                        controller: _usernameController,
-                        decoration: InputDecoration(
-                          hintText: 'Tên đăng nhập',
-                          icon: Icon(Icons.person),
+                  const SizedBox(height: 30),
+                  Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 20),
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black12,
+                          blurRadius: 5,
+                          spreadRadius: 2,
+                          offset: const Offset(0, 3),
                         ),
-                        keyboardType: TextInputType.text,
-                        textInputAction: TextInputAction.next,
-                        onSubmitted: (_) {
-                          FocusScope.of(context).requestFocus(_passwordFocusNode);
-                        },
-                      ),
-                      const SizedBox(height: 20),
-                      TextField(
-                        controller: _passwordController,
-                        decoration: InputDecoration(
-                          hintText: 'Mật khẩu',
-                          icon: Icon(Icons.lock),
-                        ),
-                        obscureText: true,
-                        focusNode: _passwordFocusNode,
-                        textInputAction: TextInputAction.done,
-                        onSubmitted: (_) {
-                          _login();
-                        },
-                      ),
-                      const SizedBox(height: 20),
-                      Row(
-                        children: <Widget>[
-                          Checkbox(
-                            value: _isAgreed,
-                            onChanged: (bool? value) {
-                              setState(() {
-                                _isAgreed = value ?? false;
-                              });
-                            },
+                      ],
+                    ),
+                    child: Column(
+                      children: <Widget>[
+                        TextField(
+                          controller: _usernameController,
+                          decoration: InputDecoration(
+                            hintText: 'Tên đăng nhập',
+                            icon: Icon(Icons.person),
                           ),
-                          GestureDetector(
-                            onTap: _launchPrivacyPolicy,
-                            child: Row(
-                              children: [
-                                Text(
-                                  'Đồng ý với các ',
-                                  style: TextStyle(fontSize: 16),
-                                ),
-                                Text(
-                                  'điều khoản',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    color: Colors.blue,
-                                    decoration: TextDecoration.underline,
+                          keyboardType: TextInputType.text,
+                          textInputAction: TextInputAction.next,
+                          onSubmitted: (_) {
+                            FocusScope.of(context).requestFocus(_passwordFocusNode);
+                          },
+                        ),
+                        const SizedBox(height: 20),
+                        TextField(
+                          controller: _passwordController,
+                          decoration: InputDecoration(
+                            hintText: 'Mật khẩu',
+                            icon: Icon(Icons.lock),
+                          ),
+                          obscureText: true,
+                          focusNode: _passwordFocusNode,
+                          textInputAction: TextInputAction.done,
+                          onSubmitted: (_) {
+                            _login();
+                          },
+                        ),
+                        const SizedBox(height: 20),
+                        Row(
+                          children: <Widget>[
+                            Checkbox(
+                              value: _isAgreed,
+                              onChanged: (bool? value) {
+                                setState(() {
+                                  _isAgreed = value ?? false;
+                                });
+                              },
+                            ),
+                            GestureDetector(
+                              onTap: _launchPrivacyPolicy,
+                              child: Row(
+                                children: [
+                                  Text(
+                                    'Đồng ý với các ',
+                                    style: TextStyle(fontSize: 16),
                                   ),
-                                ),
-                              ],
+                                  Text(
+                                    'điều khoản',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      color: Colors.blue,
+                                      decoration: TextDecoration.underline,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
+                          ],
+                        ),
+                        const SizedBox(height: 20),
+                        GestureDetector(
+                          onTap: () {
+                            _login();
+                          },
+                          child: Container(
+                            alignment: Alignment.center,
+                            width: double.infinity,
+                            padding: const EdgeInsets.symmetric(vertical: 15),
+                            decoration: BoxDecoration(
+                              color: _isButtonTapped ? Colors.blueAccent : Colors.blue,
+                              borderRadius: BorderRadius.circular(30),
+                            ),
+                            child: _isButtonTapped
+                                ? SizedBox(
+                                    height: 24,
+                                    width: 24,
+                                    child: CircularProgressIndicator(
+                                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                      strokeWidth: 2.5,
+                                    ),
+                                  )
+                                : Text(
+                                    'Đăng nhập',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 18,
+                                    ),
+                                  ),
                           ),
-                        ],
-                      ),
-                      const SizedBox(height: 20),
-                      GestureDetector(
-                        onTap: () {
-                          _login();
-                        },
-                        child: Container(
-                          alignment: Alignment.center,
-                          width: double.infinity,
-                          padding: const EdgeInsets.symmetric(vertical: 15),
-                          decoration: BoxDecoration(
-                            color: _isButtonTapped ? Colors.blueAccent : Colors.blue,
-                            borderRadius: BorderRadius.circular(30),
-                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        GestureDetector(
+                          onTap: () {
+                            Navigator.pushNamed(context, '/register');
+                          },
                           child: Text(
-                            'Đăng nhập',
+                            'Chưa có tài khoản? Đăng ký ngay',
                             style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 18,
+                              color: Colors.blue,
+                              fontSize: 16,
                             ),
                           ),
                         ),
-                      ),
-                      const SizedBox(height: 20),
-                      GestureDetector(
-                        onTap: () {
-                          Navigator.pushNamed(context, '/register');
-                        },
-                        child: Text(
-                          'Chưa có tài khoản? Đăng ký ngay',
-                          style: TextStyle(
-                            color: Colors.blue,
-                            fontSize: 16,
-                          ),
-                        ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
-        ),
-      ),
+        ), // BlocListener
+      ), // GestureDetector
     );
   }
 }

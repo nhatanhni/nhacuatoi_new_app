@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
-// import 'package:fluttertoast/fluttertoast.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:iot_app/bloc/auth/auth_bloc.dart';
+import 'package:iot_app/bloc/auth/auth_event.dart';
+import 'package:iot_app/bloc/auth/auth_state.dart';
 import 'package:iot_app/repository/user_repository.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 class AppDrawer extends StatefulWidget {
   const AppDrawer({Key? key}) : super(key: key);
@@ -174,22 +176,8 @@ class _AppDrawerState extends State<AppDrawer> {
                       TextButton(
                         child: const Text("Đăng xuất"),
                         onPressed: () {
-                          // logout
-                          final userRepository = UserRepository();
-
-                          // clear user data and login status
-                          userRepository.clearUserData();
-                          userRepository.clearLoginStatus();
-                          // Fluttertoast.showToast(
-                          //     msg: "Đăng xuất thành công!",
-                          //     toastLength: Toast.LENGTH_SHORT,
-                          //     gravity: ToastGravity.BOTTOM,
-                          //     timeInSecForIosWeb: 1,
-                          //     backgroundColor: Theme.of(context).primaryColor,
-                          //     textColor: Colors.white,
-                          //     fontSize: 16.0);
+                          context.read<AuthBloc>().add(AuthLogoutRequested());
                           print("Đăng xuất thành công!");
-                          // then navigate to login screen
                           Navigator.of(context).pop();
                           Navigator.pushNamedAndRemoveUntil(
                               context, "/login", (route) => false);

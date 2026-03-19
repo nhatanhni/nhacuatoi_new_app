@@ -1,9 +1,10 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:iot_app/core/config/app_config.dart';
 
 class ApiService {
-  final String _baseUrl = 'http://nhacuatoi.com.vn:3000';
+  final String _baseUrl = AppConfig.apiBaseUrl;
 
   // Register
   Future<Map<String, dynamic>> signUp(Map<String, dynamic> data) async {
@@ -30,6 +31,9 @@ class ApiService {
       headers: {'Content-Type': 'application/json'},
     );
 
+    print(Uri.parse('$_baseUrl/api/Sys_Account/Login'));
+    print(jsonEncode({'username': username, 'password': password}));
+
     final responseBody = jsonDecode(response.body);
 
     if (response.statusCode == 200 && responseBody['Success']) {
@@ -54,7 +58,9 @@ class ApiService {
     if (response.statusCode == 200 && responseBody['Success']) {
       return responseBody;
     } else {
-      throw Exception(responseBody['Message'] ?? 'Lấy thông tin người dùng thất bại');
+      throw Exception(
+        responseBody['Message'] ?? 'Lấy thông tin người dùng thất bại',
+      );
     }
   }
 
@@ -96,7 +102,224 @@ class ApiService {
     if (responseBody['Success'] == true) {
       return responseBody;
     } else {
-      throw Exception(responseBody['Message'] ?? 'Lấy dữ liệu đồng hồ nước thất bại');
+      throw Exception(
+        responseBody['Message'] ?? 'Lấy dữ liệu đồng hồ nước thất bại',
+      );
+    }
+  }
+
+  //get all devices of user
+  Future<List<dynamic>> fetchUserDevices() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('accessToken') ?? '';
+    final response = await http.get(
+      Uri.parse('$_baseUrl/api/Iot_DeviceType/1/500/500'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    );
+    if (response.statusCode != 200) {
+      throw Exception('Lỗi kết nối server: ${response.statusCode}');
+    }
+    if (response.body.isEmpty) {
+      throw Exception('Không có dữ liệu trả về từ server');
+    }
+    final responseBody = jsonDecode(response.body);
+    if (responseBody['Success'] == true) {
+      return responseBody['Data']["Items"] as List<dynamic>;
+    } else {
+      throw Exception(
+        responseBody['Message'] ?? 'Lấy danh sách thiết bị thất bại',
+      );
+    }
+  }
+
+  // get manage device list of user (paged)
+  Future<Map<String, dynamic>> fetchManageDevices({
+    int page = 1,
+    int pageSize = 10,
+    int totalLimitItems = 500,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('accessToken') ?? '';
+    final response = await http.get(
+      Uri.parse(
+        '$_baseUrl/api/Iot_Device/paged',
+      ).replace(
+        queryParameters: {
+          'page': page.toString(),
+          'pageSize': pageSize.toString(),
+          'totalLimitItems': totalLimitItems.toString(),
+        },
+      ),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception('Lỗi kết nối server: ${response.statusCode}');
+    }
+    if (response.body.isEmpty) {
+      throw Exception('Không có dữ liệu trả về từ server');
+    }
+
+    final responseBody = jsonDecode(response.body);
+    if (responseBody['Success'] == true) {
+      final data = responseBody['Data'];
+      if (data is Map<String, dynamic>) {
+        final items = data['Items'];
+        return {
+          'items': items is List<dynamic> ? items : <dynamic>[],
+          'totalItems': (data['TotalItems'] ?? 0) as int,
+          'pageSize': (data['PageSize'] ?? pageSize) as int,
+          'pageIndex': (data['PageIndex'] ?? page) as int,
+          'minPage': (data['MinPage'] ?? 1) as int,
+          'maxPage': (data['MaxPage'] ?? page) as int,
+        };
+      }
+      return {
+        'items': <dynamic>[],
+        'totalItems': 0,
+        'pageSize': pageSize,
+        'pageIndex': page,
+        'minPage': 1,
+        'maxPage': 1,
+      };
+    }
+
+    throw Exception(
+      responseBody['Message'] ?? 'Lấy danh sách thiết bị thất bại',
+    );
+  }
+
+  // create device on server
+  Future<Map<String, dynamic>> createDevice(
+    Map<String, dynamic> payload,
+  ) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('accessToken') ?? '';
+    final response = await http.post(
+      Uri.parse('$_baseUrl/api/Iot_Device'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode(payload),
+    );
+
+    if (response.body.isEmpty) {
+      throw Exception('Khong co du lieu tra ve tu server');
+    }
+
+    final responseBody = jsonDecode(response.body);
+    if (response.statusCode == 200 && responseBody['Success'] == true) {
+      return responseBody as Map<String, dynamic>;
+    }
+
+    throw Exception(responseBody['Message'] ?? 'Them thiet bi that bai');
+  }
+
+  // delete device on server by id
+  Future<void> deleteDeviceOnServer(String deviceId) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('accessToken') ?? '';
+    final response = await http.delete(
+      Uri.parse('$_baseUrl/api/Iot_Device/$deviceId'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    );
+
+    if (response.body.isEmpty) {
+      throw Exception('Khong co du lieu tra ve tu server');
+    }
+
+    final responseBody = jsonDecode(response.body);
+    if (response.statusCode == 200 && responseBody['Success'] == true) {
+      return;
+    }
+
+    throw Exception(responseBody['Message'] ?? 'Xoa thiet bi that bai');
+  }
+
+  // get all stations
+  Future<List<dynamic>> fetchStations() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('accessToken') ?? '';
+    final response = await http.get(
+      Uri.parse('$_baseUrl/api/Iot_Station/get-all'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    );
+    if (response.statusCode != 200) {
+      throw Exception('Lỗi kết nối server: ${response.statusCode}');
+    }
+    if (response.body.isEmpty) {
+      throw Exception('Không có dữ liệu trả về từ server');
+    }
+    final responseBody = jsonDecode(response.body);
+    if (responseBody['Success'] == true) {
+      return responseBody['Data'] as List<dynamic>;
+    } else {
+      throw Exception(responseBody['Message'] ?? 'Lấy danh sách trạm thất bại');
+    }
+  }
+
+  // save history of switching device
+  Future<void> saveSwitchDeviceHistory(String deviceId, int isSwitched) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('accessToken') ?? '';
+    final response = await http.post(
+      Uri.parse('$_baseUrl/api/Iot_HisDevice/switch-history'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode({'deviceId': deviceId, 'isSwitched': isSwitched}),
+    );
+    if (response.statusCode != 200) {
+      throw Exception('Lỗi kết nối server: ${response.statusCode}');
+    }
+    final responseBody = jsonDecode(response.body);
+    if (responseBody['Success'] != true) {
+      throw Exception(
+        responseBody['Message'] ?? 'Lưu lịch sử thiết bị thất bại',
+      );
+    }
+  }
+
+  // Fetch device history by deviceId
+  Future<List<dynamic>> fetchDeviceHistoryByDeviceId(String deviceId) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('accessToken') ?? '';
+    final response = await http.get(
+      Uri.parse(
+        '$_baseUrl/api/Iot_HisDevice/switch-history',
+      ).replace(queryParameters: {'deviceId': deviceId}),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    );
+    if (response.statusCode != 200) {
+      throw Exception('Lỗi kết nối server: ${response.statusCode}');
+    }
+    if (response.body.isEmpty) {
+      throw Exception('Không có dữ liệu trả về từ server');
+    }
+    final responseBody = jsonDecode(response.body);
+    if (responseBody['Success'] == true) {
+      return responseBody['Data'] as List<dynamic>;
+    } else {
+      throw Exception(
+        responseBody['Message'] ?? 'Lấy lịch sử thiết bị thất bại',
+      );
     }
   }
 }

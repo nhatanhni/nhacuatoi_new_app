@@ -43,13 +43,13 @@ class _PumpStationScreenState extends State<PumpStationScreen> {
   @override
   void initState() {
     super.initState();
-    _mqttManager = MQTTManager();
+    _mqttManager = MQTTManager.instance;
     _pumpStation = PumpStationDevice.createDefault(widget.device.deviceSerial, widget.device.deviceName);
     _initializeScreen();
   }
 
   Future<void> _initializeScreen() async {
-    await _mqttManager.connect();
+    await _mqttManager.ensureConnected();
     await _loadSubDevices();
     _subscribeToTopics();
     _startCooldownTimer();
@@ -1575,7 +1575,7 @@ class _PumpStationScreenState extends State<PumpStationScreen> {
   void dispose() {
     _cooldownTimer?.cancel();
     _statusUpdateTimer?.cancel();
-    _mqttManager.dispose();
+    // Don't dispose the singleton MQTTManager
     super.dispose();
   }
 }

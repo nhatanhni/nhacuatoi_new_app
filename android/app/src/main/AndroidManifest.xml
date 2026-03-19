@@ -42,7 +42,7 @@
     <uses-feature android:name="android.hardware.camera.flash" android:required="false" />
     
     <application
-        android:label="Nhà Của Tôi"
+        android:label="Data Monitoring Platform"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
         android:enableOnBackInvokedCallback="true"

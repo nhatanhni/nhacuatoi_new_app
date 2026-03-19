@@ -3,9 +3,10 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:iot_app/core/config/app_config.dart';
 
 class SchedulerRepository {
-  final String _baseUrl = 'http://nhacuatoi.com.vn:3000';
+  final String _baseUrl = AppConfig.apiBaseUrl;
 
   Future<String> _getToken() async {
     final prefs = await SharedPreferences.getInstance();

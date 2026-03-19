@@ -5,12 +5,13 @@ import 'package:iot_app/database/database_helper.dart';
 import 'package:iot_app/repository/mqtt_manager.dart';
 
 void deviceScheduler(int deviceId, Map<String, dynamic> params) async {
-  // Extract the duration and repeat from the params
   final duration = params['duration'] as int;
   final repeat = params['repeat'] as bool;
   final deviceSerial = params['deviceSerial'] as String;
 
-  await MQTTManager.connectAndPublish('nhacuatoi.com.vn', 'flutter_client_scheduler', 'NhaCuaToi_$deviceSerial', 'ON');
+  final mqttManager = MQTTManager.instance;
+  await mqttManager.ensureConnected();
+  await mqttManager.publish('NhaCuaToi_$deviceSerial', 'ON');
 
   // Turn on the device
   await DatabaseHelper.updateDeviceStatusAndLogEvent(deviceId, 1);
@@ -23,7 +24,7 @@ void deviceScheduler(int deviceId, Map<String, dynamic> params) async {
   await DatabaseHelper.updateDeviceStatusAndLogEvent(deviceId, 0);
 
   // Publish a message to turn off the device
-  await MQTTManager.connectAndPublish('nhacuatoi.com.vn', 'flutter_client_scheduler', 'NhaCuaToi_$deviceSerial', 'OFF');
+  await mqttManager.publish('NhaCuaToi_$deviceSerial', 'OFF');
 
   // If the repeat option is set to 'Hằng ngày', schedule the next alarm
   if (repeat) {

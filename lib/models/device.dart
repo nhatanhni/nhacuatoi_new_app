@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 class Device {
-  int? id;
+  dynamic id;
   String deviceType;
   String deviceSerial;
   String deviceName;

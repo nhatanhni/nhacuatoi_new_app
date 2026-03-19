@@ -14,7 +14,9 @@ import 'package:iot_app/screens/pump_station_screen.dart';
 import 'package:mqtt_client/mqtt_client.dart';
 
 class DeviceListScreen extends StatefulWidget {
-  const DeviceListScreen({Key? key}) : super(key: key);
+  final GlobalKey<ScaffoldState>? rootScaffoldKey;
+
+  const DeviceListScreen({Key? key, this.rootScaffoldKey}) : super(key: key);
 
   @override
   State<DeviceListScreen> createState() => _DeviceListScreenState();
@@ -265,12 +267,13 @@ class _DeviceListScreenState extends State<DeviceListScreen> {
         centerTitle: true,
         leading: IconButton(
           onPressed: () {
-            _scaffoldKey.currentState?.openDrawer();
+            final scaffoldKey = widget.rootScaffoldKey ?? _scaffoldKey;
+            scaffoldKey.currentState?.openDrawer();
           },
           icon: const Icon(Icons.menu),
         ),
       ),
-      drawer: const AppDrawer(),
+      drawer: widget.rootScaffoldKey == null ? const AppDrawer() : null,
       body: SafeArea(
         child: BlocListener<DeviceBloc, DeviceState>(
           listener: (context, state) {

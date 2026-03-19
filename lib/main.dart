@@ -22,6 +22,7 @@ import 'package:iot_app/screens/add_device_screen.dart';
 import 'package:iot_app/screens/login_screen.dart';
 import 'package:iot_app/screens/manage_device_screen.dart';
 import 'package:iot_app/screens/device_detail_screen.dart';
+import 'package:iot_app/screens/splash_screen.dart';
 import 'package:iot_app/models/device.dart';
 import 'package:android_alarm_manager_plus/android_alarm_manager_plus.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -29,6 +30,7 @@ import 'package:iot_app/screens/register_screen.dart';
 import 'package:workmanager/workmanager.dart';
 import 'package:iot_app/screens/pump_station_screen.dart';
 import 'package:iot_app/screens/wifi_setup_screen.dart';
+import 'package:iot_app/widgets/drawer_widget.dart';
 
 import 'database/database_helper.dart';
 import 'widgets/notification_service.dart';
@@ -194,14 +196,14 @@ class _AppViewState extends State<_AppView> {
       ),
       initialRoute: widget.initialRoute,
       routes: {
-        '/': (context) => HomeScreen(),
+        '/': (context) => const SplashScreen(),
         '/register': (context) => RegisterScreen(),
         '/login': (context) => LoginScreen(),
         '/add_device': (context) => AddDeviceScreen(),
         '/manage_device': (context) => ManageDeviceScreen(),
         '/device_list': (context) => DeviceListScreen(),
         '/user_list': (context) => UserListScreen(),
-        '/home': (context) => HomeScreen(),
+        '/home': (context) => const MainShell(),
         '/wifi_setup': (context) => WiFiSetupScreen(),
       },
       navigatorObservers: [MyApp.routeObserver],
@@ -231,6 +233,138 @@ class _AppViewState extends State<_AppView> {
         assert(false, 'Need to implement ${settings.name}');
         return null;
       },
+    );
+  }
+}
+
+class MainShell extends StatefulWidget {
+  final int initialIndex;
+
+  const MainShell({super.key, this.initialIndex = 0});
+
+  @override
+  State<MainShell> createState() => _MainShellState();
+}
+
+class _MainShellState extends State<MainShell> {
+  static const _activeColor = Color(0xFF403AB7);
+  static const _inactiveColor = Color(0xFFD2E0EE);
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+
+  late int _index = widget.initialIndex;
+
+  late final List<Widget> _pages;
+
+  @override
+  void initState() {
+    super.initState();
+    _pages = <Widget>[
+      HomeScreen(rootScaffoldKey: _scaffoldKey),
+      DeviceListScreen(rootScaffoldKey: _scaffoldKey),
+      const ManageDeviceScreen(),
+      const UserListScreen(),
+    ];
+  }
+
+  void _onTap(int nextIndex) {
+    if (nextIndex == _index) return;
+    setState(() => _index = nextIndex);
+  }
+
+  Widget _navItem({
+    required IconData icon,
+    required String label,
+    required bool active,
+    required VoidCallback onTap,
+  }) {
+    final color = active ? _activeColor : _inactiveColor;
+
+    return Expanded(
+      child: InkResponse(
+        onTap: onTap,
+        radius: 28,
+        child: Padding(
+          padding: const EdgeInsets.only(top: 10, bottom: 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 24, color: color),
+              const SizedBox(height: 4),
+              Text(
+                label,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w700,
+                  height: 14 / 10,
+                  letterSpacing: -0.0305,
+                  color: color,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      key: _scaffoldKey,
+      extendBody: true,
+      drawer: const AppDrawer(),
+      body: IndexedStack(index: _index, children: _pages),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+      floatingActionButton: SizedBox(
+        height: 56,
+        width: 56,
+        child: FloatingActionButton(
+          elevation: 6,
+          backgroundColor: _activeColor,
+          foregroundColor: Colors.white,
+          shape: const CircleBorder(),
+          onPressed: () => Navigator.of(context).pushNamed('/add_device'),
+          child: const Icon(Icons.add, size: 24),
+        ),
+      ),
+      bottomNavigationBar: BottomAppBar(
+        height: 101,
+        color: Colors.white,
+        elevation: 10,
+        shadowColor: Colors.black.withValues(alpha: 0.12),
+        shape: const CircularNotchedRectangle(),
+        notchMargin: 8,
+        child: Row(
+          children: [
+            _navItem(
+              icon: Icons.home_rounded,
+              label: 'Home',
+              active: _index == 0,
+              onTap: () => _onTap(0),
+            ),
+            _navItem(
+              icon: Icons.schedule_rounded,
+              label: 'Schedule',
+              active: _index == 1,
+              onTap: () => _onTap(1),
+            ),
+            const SizedBox(width: 75),
+            _navItem(
+              icon: Icons.description_rounded,
+              label: 'Scripts',
+              active: _index == 2,
+              onTap: () => _onTap(2),
+            ),
+            _navItem(
+              icon: Icons.settings_rounded,
+              label: 'Settings',
+              active: _index == 3,
+              onTap: () => _onTap(3),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

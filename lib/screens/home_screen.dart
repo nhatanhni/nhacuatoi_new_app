@@ -1,15 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:iot_app/bloc/device/device_bloc.dart';
-import 'package:iot_app/bloc/device/device_event.dart';
-import '../widgets/appbar_dropdown_widget.dart';
 import '../widgets/drawer_widget.dart';
+import '../widgets/top_bar.dart';
 import '../database/database_helper.dart' if (dart.library.html) '../database/web_database_helper.dart';
 import 'device_detail_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({Key? key}) : super(key: key);
+  final GlobalKey<ScaffoldState>? rootScaffoldKey;
+
+  const HomeScreen({Key? key, this.rootScaffoldKey}) : super(key: key);
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -82,16 +81,12 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final drawerKey = widget.rootScaffoldKey ?? _scaffoldKey;
+
     return Scaffold(
       key: _scaffoldKey,
-      appBar: AppBar(
-        title: const Text('Nhà Của Tôi'),
-        elevation: 0,
-        actions: const <Widget>[
-          AppBarDropdown(),
-        ],
-      ),
-      drawer: const AppDrawer(),
+      appBar: FigmaTopBar(scaffoldKey: drawerKey),
+      drawer: widget.rootScaffoldKey == null ? const AppDrawer() : null,
       body: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,

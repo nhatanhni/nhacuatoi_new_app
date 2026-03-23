@@ -47,7 +47,7 @@ dependencies:
   workmanager: ^0.8.0
   # qr_code_scanner: ^1.0.1  # Commented out for iOS build
   wifi_scan: ^0.4.0+3
-  # permission_handler: ^12.0.0+1
+  permission_handler: ^12.0.1
   wifi_iot: ^0.3.18
   fluttertoast: ^9.0.0
   fl_chart: ^0.69.0

@@ -162,7 +162,7 @@ class _WiFiSetupScreenState extends State<WiFiSetupScreen> {
               ElevatedButton(
                 onPressed: () {
                   Navigator.pop(context);
-                  openAppSettings();
+                  openPermissionSettings();
                 },
                 child: const Text('Mở Cài Đặt'),
               ),

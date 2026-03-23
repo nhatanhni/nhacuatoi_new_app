@@ -9,13 +9,14 @@ import 'package:iot_app/bloc/auth/auth_state.dart';
 import 'package:iot_app/core/config/app_config.dart';
 
 class LoginScreen extends StatefulWidget {
-  LoginScreen({Key? key}) : super(key: key);
+  const LoginScreen({Key? key}) : super(key: key);
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
 }
 
 class _LoginScreenState extends State<LoginScreen> {
+  final _formKey = GlobalKey<FormState>();
   final TextEditingController _usernameController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final FocusNode _passwordFocusNode = FocusNode();
@@ -23,18 +24,84 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _isButtonTapped = false;
   bool _isAgreed = false;
 
-  // Function to launch the privacy policy URL
-  void _launchPrivacyPolicy() async {
-    final url = AppConfig.privacyPolicyUrl;
-    if (await canLaunch(url)) {
-      await launch(url);
-    } else {
-      throw 'Could not launch $url';
+  String? _validateUsername(String? value) {
+    final username = value?.trim() ?? '';
+
+    if (username.isEmpty) {
+      return 'Vui lòng nhập tên đăng nhập';
+    }
+    if (username.length < 3 || username.length > 50) {
+      return 'Tên đăng nhập phải từ 3 đến 50 ký tự';
+    }
+    if (!RegExp(r'^[a-zA-Z0-9._-]+$').hasMatch(username)) {
+      return 'Tên đăng nhập chỉ gồm chữ, số, dấu chấm, gạch dưới hoặc gạch ngang';
+    }
+
+    return null;
+  }
+
+  String? _validatePassword(String? value) {
+    final password = value ?? '';
+
+    if (password.isEmpty) {
+      return 'Vui lòng nhập mật khẩu';
+    }
+    if (password.length < 6 || password.length > 64) {
+      return 'Mật khẩu phải từ 6 đến 64 ký tự';
+    }
+
+    return null;
+  }
+
+  Future<void> _launchPrivacyPolicy() async {
+    final policyUri = Uri.tryParse(AppConfig.privacyPolicyUrl);
+    if (policyUri == null) {
+      Fluttertoast.showToast(
+        msg: 'Đường dẫn điều khoản không hợp lệ',
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.BOTTOM,
+        backgroundColor: Colors.red,
+        textColor: Colors.white,
+      );
+      return;
+    }
+
+    try {
+      final launched = await launchUrl(
+        policyUri,
+        mode: LaunchMode.externalApplication,
+      );
+
+      if (!launched && mounted) {
+        _showAlertDialog('Không thể mở liên kết', 'Vui lòng thử lại sau.');
+      }
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      _showAlertDialog('Lỗi mở liên kết', 'Không thể mở điều khoản dịch vụ.');
     }
   }
 
   void _login() {
-    final username = _usernameController.text;
+    if (_isButtonTapped) {
+      return;
+    }
+
+    FocusScope.of(context).unfocus();
+
+    if (!(_formKey.currentState?.validate() ?? false)) {
+      Fluttertoast.showToast(
+        msg: 'Vui lòng kiểm tra lại thông tin đăng nhập',
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.BOTTOM,
+        backgroundColor: Colors.red,
+        textColor: Colors.white,
+      );
+      return;
+    }
+
+    final username = _usernameController.text.trim();
     final password = _passwordController.text;
 
     if (!_isAgreed) {
@@ -46,6 +113,14 @@ class _LoginScreenState extends State<LoginScreen> {
       username: username,
       password: password,
     ));
+  }
+
+  @override
+  void dispose() {
+    _usernameController.dispose();
+    _passwordController.dispose();
+    _passwordFocusNode.dispose();
+    super.dispose();
   }
 
   void _showAlertDialog(String title, String message) {
@@ -76,6 +151,10 @@ class _LoginScreenState extends State<LoginScreen> {
       },
       child: BlocListener<AuthBloc, AuthState>(
         listener: (context, state) {
+          if (!mounted) {
+            return;
+          }
+
           if (state is AuthLoading) {
             setState(() => _isButtonTapped = true);
           } else if (state is AuthAuthenticated) {
@@ -139,111 +218,115 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ],
                     ),
-                    child: Column(
-                      children: <Widget>[
-                        TextField(
-                          controller: _usernameController,
-                          decoration: InputDecoration(
-                            hintText: 'Tên đăng nhập',
-                            icon: Icon(Icons.person),
-                          ),
-                          keyboardType: TextInputType.text,
-                          textInputAction: TextInputAction.next,
-                          onSubmitted: (_) {
-                            FocusScope.of(context).requestFocus(_passwordFocusNode);
-                          },
-                        ),
-                        const SizedBox(height: 20),
-                        TextField(
-                          controller: _passwordController,
-                          decoration: InputDecoration(
-                            hintText: 'Mật khẩu',
-                            icon: Icon(Icons.lock),
-                          ),
-                          obscureText: true,
-                          focusNode: _passwordFocusNode,
-                          textInputAction: TextInputAction.done,
-                          onSubmitted: (_) {
-                            _login();
-                          },
-                        ),
-                        const SizedBox(height: 20),
-                        Row(
-                          children: <Widget>[
-                            Checkbox(
-                              value: _isAgreed,
-                              onChanged: (bool? value) {
-                                setState(() {
-                                  _isAgreed = value ?? false;
-                                });
-                              },
+                    child: Form(
+                      key: _formKey,
+                      autovalidateMode: AutovalidateMode.onUserInteraction,
+                      child: Column(
+                        children: <Widget>[
+                          TextFormField(
+                            controller: _usernameController,
+                            decoration: const InputDecoration(
+                              hintText: 'Tên đăng nhập',
+                              icon: Icon(Icons.person),
                             ),
-                            GestureDetector(
-                              onTap: _launchPrivacyPolicy,
-                              child: Row(
-                                children: [
-                                  Text(
-                                    'Đồng ý với các ',
-                                    style: TextStyle(fontSize: 16),
-                                  ),
-                                  Text(
-                                    'điều khoản',
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      color: Colors.blue,
-                                      decoration: TextDecoration.underline,
+                            keyboardType: TextInputType.text,
+                            textInputAction: TextInputAction.next,
+                            validator: _validateUsername,
+                            onFieldSubmitted: (_) {
+                              FocusScope.of(context).requestFocus(_passwordFocusNode);
+                            },
+                          ),
+                          const SizedBox(height: 20),
+                          TextFormField(
+                            controller: _passwordController,
+                            decoration: const InputDecoration(
+                              hintText: 'Mật khẩu',
+                              icon: Icon(Icons.lock),
+                            ),
+                            obscureText: true,
+                            focusNode: _passwordFocusNode,
+                            textInputAction: TextInputAction.done,
+                            validator: _validatePassword,
+                            onFieldSubmitted: (_) {
+                              _login();
+                            },
+                          ),
+                          const SizedBox(height: 20),
+                          Row(
+                            children: <Widget>[
+                              Checkbox(
+                                value: _isAgreed,
+                                onChanged: (bool? value) {
+                                  setState(() {
+                                    _isAgreed = value ?? false;
+                                  });
+                                },
+                              ),
+                              GestureDetector(
+                                onTap: _launchPrivacyPolicy,
+                                child: Row(
+                                  children: const [
+                                    Text(
+                                      'Đồng ý với các ',
+                                      style: TextStyle(fontSize: 16),
                                     ),
-                                  ),
-                                ],
+                                    Text(
+                                      'điều khoản',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        color: Colors.blue,
+                                        decoration: TextDecoration.underline,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 20),
+                          GestureDetector(
+                            onTap: _isButtonTapped ? null : _login,
+                            child: Container(
+                              alignment: Alignment.center,
+                              width: double.infinity,
+                              padding: const EdgeInsets.symmetric(vertical: 15),
+                              decoration: BoxDecoration(
+                                color: _isButtonTapped ? Colors.blueAccent : Colors.blue,
+                                borderRadius: BorderRadius.circular(30),
+                              ),
+                              child: _isButtonTapped
+                                  ? const SizedBox(
+                                      height: 24,
+                                      width: 24,
+                                      child: CircularProgressIndicator(
+                                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                        strokeWidth: 2.5,
+                                      ),
+                                    )
+                                  : const Text(
+                                      'Đăng nhập',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 18,
+                                      ),
+                                    ),
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+                          GestureDetector(
+                            onTap: () {
+                              Navigator.pushNamed(context, '/register');
+                            },
+                            child: const Text(
+                              'Chưa có tài khoản? Đăng ký ngay',
+                              style: TextStyle(
+                                color: Colors.blue,
+                                fontSize: 16,
                               ),
                             ),
-                          ],
-                        ),
-                        const SizedBox(height: 20),
-                        GestureDetector(
-                          onTap: () {
-                            _login();
-                          },
-                          child: Container(
-                            alignment: Alignment.center,
-                            width: double.infinity,
-                            padding: const EdgeInsets.symmetric(vertical: 15),
-                            decoration: BoxDecoration(
-                              color: _isButtonTapped ? Colors.blueAccent : Colors.blue,
-                              borderRadius: BorderRadius.circular(30),
-                            ),
-                            child: _isButtonTapped
-                                ? SizedBox(
-                                    height: 24,
-                                    width: 24,
-                                    child: CircularProgressIndicator(
-                                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                                      strokeWidth: 2.5,
-                                    ),
-                                  )
-                                : Text(
-                                    'Đăng nhập',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 18,
-                                    ),
-                                  ),
                           ),
-                        ),
-                        const SizedBox(height: 20),
-                        GestureDetector(
-                          onTap: () {
-                            Navigator.pushNamed(context, '/register');
-                          },
-                          child: Text(
-                            'Chưa có tài khoản? Đăng ký ngay',
-                            style: TextStyle(
-                              color: Colors.blue,
-                              fontSize: 16,
-                            ),
-                          ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 ],

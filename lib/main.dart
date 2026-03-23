@@ -60,8 +60,8 @@ Future<void> main() async {
     await AndroidAlarmManager.initialize();
   }
 
-  if (!kIsWeb) {
-    Workmanager().initialize(callbackDispatcher, isInDebugMode: true);
+  if (!kIsWeb && Platform.isAndroid) {
+    Workmanager().initialize(callbackDispatcher, isInDebugMode: kDebugMode);
 
     try {
       await Workmanager().registerPeriodicTask(

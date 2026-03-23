@@ -46,7 +46,8 @@ post_install do |installer|
         '$(inherited)',
         'PERMISSION_CAMERA=1',
         'PERMISSION_LOCATION=1',
-        'PERMISSION_WIFI=1'
+        'PERMISSION_LOCATION_WHENINUSE=1',
+        'PERMISSION_NOTIFICATIONS=1'
       ]
       # Enable arm64 for iOS Simulator
       config.build_settings['EXCLUDED_ARCHS[sdk=iphonesimulator*]'] = ''

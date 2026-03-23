@@ -54,6 +54,7 @@ flutter build ios --release
 ### 4. Đóng gói & phát hành
 - Android: Upload file `.aab` lên Google Play Console.
 - iOS: Upload bản release qua Xcode hoặc Transporter lên App Store Connect.
+- Checklist phát hành chi tiết: xem `RELEASE_CHECKLIST.md`.
 
 ---
 

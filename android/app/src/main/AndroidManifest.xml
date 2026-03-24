@@ -23,13 +23,13 @@
     <uses-feature android:name="android.hardware.camera.flash" android:required="false" />
     
     <application
-        android:label="Data Monitoring Platform"
+        android:label="data_monitoring_platform"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
         android:enableOnBackInvokedCallback="true"
         android:hardwareAccelerated="true">
         <activity
-            android:name="com.nhacuatoimqtt.iotapp.iot_app.MainActivity"
+            android:name="com.datamonitoringplatform.iotapp.MainActivity"
             android:exported="true"
             android:launchMode="singleTop"
             android:taskAffinity=""

@@ -1,4 +1,4 @@
-# Release Checklist (Google Play + App Store)
+`# Release Checklist (Google Play + App Store)
 
 ## 1) Flutter sanity checks
 - Run `flutter clean`

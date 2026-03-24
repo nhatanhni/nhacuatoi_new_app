@@ -66,8 +66,8 @@
 -keepattributes EnclosingMethod
 
 # Android 15 specific optimizations
--keep class com.nhacuatoimqtt.iotapp.** { *; }
--keepclassmembers class com.nhacuatoimqtt.iotapp.** {
+-keep class com.datamonitoringplatform.iotapp.** { *; }
+-keepclassmembers class com.datamonitoringplatform.iotapp.** {
     *;
 }
 

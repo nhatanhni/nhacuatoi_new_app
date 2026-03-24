@@ -8,7 +8,7 @@
 PRODUCT_NAME = new_iot_app
 
 // The application's bundle identifier
-PRODUCT_BUNDLE_IDENTIFIER = com.nhacuatoimqtt.iotapp.newIotApp
+PRODUCT_BUNDLE_IDENTIFIER = com.datamonitoringplatform.iotapp.newIotApp
 
 // The copyright displayed in application information
-PRODUCT_COPYRIGHT = Copyright © 2025 com.nhacuatoimqtt.iotapp. All rights reserved.
+PRODUCT_COPYRIGHT = Copyright © 2025 com.datamonitoringplatform.iotapp. All rights reserved.

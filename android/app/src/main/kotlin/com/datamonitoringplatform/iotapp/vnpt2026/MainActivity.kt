@@ -1,4 +1,4 @@
-package com.datamonitoringplatform.iotapp.vnpt2026
+package com.datamonitoringplatform.iotapp
 
 import io.flutter.embedding.android.FlutterActivity
 import android.os.Bundle

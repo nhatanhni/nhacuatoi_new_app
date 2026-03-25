@@ -1,23 +1,14 @@
 // ignore_for_file: prefer_const_constructors, avoid_print, prefer_const_literals_to_create_immutables, prefer_final_fields, prefer_const_constructors_in_immutables
 
-import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:fluttertoast/fluttertoast.dart';
-import 'package:geolocator/geolocator.dart';
-import 'package:uuid/uuid.dart';
-import 'package:iot_app/bloc/device/device_bloc.dart';
-import 'package:iot_app/bloc/device/device_event.dart';
-import 'package:iot_app/bloc/device/device_state.dart';
-import 'package:iot_app/bloc/station/station_bloc.dart';
-import 'package:iot_app/bloc/station/station_event.dart';
-import 'package:iot_app/bloc/station/station_state.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import '../models/device.dart';
+import '../database/database_helper.dart';
 import '../widgets/appbar_back_to_home_widget.dart';
 import '../widgets/appbar_dropdown_widget.dart';
+import '../widgets/custom_button_widget.dart';
 
 class AddDeviceScreen extends StatefulWidget {
   AddDeviceScreen({Key? key}) : super(key: key);
@@ -31,140 +22,78 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> {
       TextEditingController();
   TextEditingController _deviceNameTextEditingController =
       TextEditingController();
-  String? dropdownStationValue;
-  String? dropdownDeviceTypeId;
-  String? dropdownDeviceTypeName;
+  String dropdownValue = 'Công tắc';
   String dropdownSensorValue = 'Nhiệt độ';
-  bool isLoading = false;
-
+  
   // Form fields cho sensor mực nước
   final _maxCapacityController = TextEditingController(text: '100');
   final _minThresholdController = TextEditingController(text: '10');
   final _maxThresholdController = TextEditingController(text: '90');
 
+  final dbHelper = DatabaseHelper.instance;
+
   // var to track sensor creation
   var isCreatingSensor = false;
   var baseValueForSlider = 50.0;
 
-  Future<Position> _getCurrentPosition() async {
-    final serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    if (!serviceEnabled) {
-      throw Exception('Vui lòng bật dịch vụ vị trí trên thiết bị');
+  void _addDevice(String deviceType) async {
+    // Create a new SmartDevice
+    var device;
+    if (deviceType == 'Sensor') {
+      // Create a new device with type sensor (with sensor type and threshold)
+      device = Device(
+        deviceType: deviceType,
+        deviceSerial: _deviceSerialTextEditingController.text,
+        deviceName: _deviceNameTextEditingController.text,
+        deviceStatus: 0,
+        sensorType: dropdownSensorValue,
+        sensorThreshold: baseValueForSlider.round(),
+      );
+    } else if (deviceType == 'Trạm bơm') {
+      // Create a new pump station device
+      device = Device(
+        deviceType: deviceType,
+        deviceSerial: _deviceSerialTextEditingController.text,
+        deviceName: _deviceNameTextEditingController.text,
+        deviceStatus: 0,
+      );
+    } else {
+      // Create a new device with type switch
+      device = Device(
+        deviceType: deviceType,
+        deviceSerial: _deviceSerialTextEditingController.text,
+        deviceName: _deviceNameTextEditingController.text,
+        deviceStatus: 0,
+      );
     }
 
-    var permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-    }
-
-    if (permission == LocationPermission.denied ||
-        permission == LocationPermission.deniedForever) {
-      throw Exception('Ứng dụng chưa được cấp quyền truy cập vị trí');
-    }
-
-    return Geolocator.getCurrentPosition(
-      desiredAccuracy: LocationAccuracy.high,
-    );
-  }
-
-  Future<void> _addDevice(String deviceTypeId, String deviceTypeName) async {
+    // Get a local reference to the context
     final localContext = context;
-    final serial = _deviceSerialTextEditingController.text.trim();
-    final name = _deviceNameTextEditingController.text.trim();
 
-    if (serial.isEmpty || name.isEmpty) {
-      ScaffoldMessenger.of(localContext).showSnackBar(
-        SnackBar(content: Text('Vui lòng nhập Serial và Tên thiết bị')),
-      );
-      return;
-    }
-
-    if (dropdownStationValue == null) {
-      ScaffoldMessenger.of(
-        localContext,
-      ).showSnackBar(SnackBar(content: Text('Vui lòng chọn trạm')));
-      return;
-    }
-
+    // Insert the SmartDevice into the database
     try {
-      setState(() {
-        isLoading = true;
-      });
-
-      final position = await _getCurrentPosition();
-      final prefs = await SharedPreferences.getInstance();
-      final stationId = dropdownStationValue!;
-
-      final uuid = Uuid();
-      final payload = {
-        'Id': uuid.v4(),
-        'IdDeviceType': deviceTypeId,
-        'DeviceTypeId': deviceTypeId,
-        'ManagementUnitId': prefs.getString('managementUnitId') ?? stationId,
-        'IdDonVi': prefs.getString('idDonVi') ?? stationId,
-        'StationId': stationId,
-        'SelectedStationId': stationId,
-        'ParentId': stationId,
-        'Serial': serial,
-        'Name': name,
-        'Model': '',
-        'Manufacturer': '',
-        'Description': deviceTypeName == 'Sensor'
-            ? 'Loai: $dropdownSensorValue, Nguong: ${baseValueForSlider.round()}'
-            : '',
-        'PurchaseDate': null,
-        'ActivationDate': null,
-        'WarrantyExpiryDate': null,
-        'RunningTimeToday': 0,
-        'TotalRuntime': 0,
-        'FirmwareVersion': '',
-        'Startup': false,
-        'Status': 0,
-        'Address': '',
-        'Lat': position.latitude.toString(),
-        'Long': position.longitude.toString(),
-        'Latitude': position.latitude.toString(),
-        'Longitude': position.longitude.toString(),
-        'Position': 0,
-        'PositionName': '',
-        'MqUsername': '',
-        'MqPass': '',
-        'MqTopic': '',
-      };
-
-      final completer = Completer<void>();
-      localContext.read<DeviceBloc>().add(
-        DeviceCreateOnServerRequested(payload: payload, completer: completer),
-      );
-      await completer.future;
-
-      setState(() {
-        isLoading = false;
-      });
-
-      // Hiển thị toast thông báo thành công
-      Fluttertoast.showToast(
-        msg: 'Thêm thiết bị thành công',
-        toastLength: Toast.LENGTH_SHORT,
-        gravity: ToastGravity.BOTTOM,
-        timeInSecForIosWeb: 1,
-        backgroundColor: Colors.green,
-        textColor: Colors.white,
-        fontSize: 16.0,
-      );
+      final deviceId = await dbHelper.insertDevice(device);
+      
+      // Nếu là trạm bơm, tạo các thiết bị con mặc định
+      if (deviceType == 'Trạm bơm') {
+        try {
+          print('🏭 Creating pump station with ID: $deviceId');
+          await dbHelper.createDefaultPumpStationSubDevices(deviceId);
+          print('✅ Pump station created successfully');
+        } catch (e) {
+          print('❌ Error creating pump station sub devices: $e');
+          // Vẫn tiếp tục mà không throw lỗi
+        }
+      }
 
       Navigator.pushNamed(localContext, "/manage_device");
     } catch (e) {
-      setState(() {
-        isLoading = false;
-      });
-
       showDialog(
         context: localContext,
         builder: (context) {
           return AlertDialog(
-            title: Text('Lỗi'),
-            content: Text('Không thể thêm thiết bị. Lỗi: $e'),
+            title: Text('Error'),
+            content: Text('Failed to add device. Error: $e'),
             actions: <Widget>[
               TextButton(
                 child: Text('OK'),
@@ -191,13 +120,6 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> {
   }
 
   @override
-  void initState() {
-    super.initState();
-    context.read<DeviceBloc>().add(DeviceLoadAll());
-    context.read<StationBloc>().add(StationLoadAll());
-  }
-
-  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
@@ -214,130 +136,35 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> {
               children: [
                 Container(
                   padding: EdgeInsets.all(10.0),
-                  margin: EdgeInsets.only(top: 20, bottom: 10),
+                  margin: EdgeInsets.symmetric(vertical: 20),
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: Colors.grey, width: 1.0),
+                    border: Border.all(
+                      color: Colors.grey,
+                      width: 1.0,
+                    ),
                   ),
-                  child: BlocBuilder<StationBloc, StationState>(
-                    builder: (context, state) {
-                      if (state is StationLoaded) {
-                        final stations = state.stations;
-                        final stationIds = stations.map((s) => s.id).toList();
-
-                        if (dropdownStationValue == null ||
-                            !stationIds.contains(dropdownStationValue)) {
-                          WidgetsBinding.instance.addPostFrameCallback((_) {
-                            setState(() {
-                              dropdownStationValue = stations.isNotEmpty
-                                  ? stations.first.id
-                                  : null;
-                            });
-                          });
-                        }
-
-                        return DropdownButtonHideUnderline(
-                          child: DropdownButton<String>(
-                            isExpanded: true,
-                            value: dropdownStationValue,
-                            hint: Text('Chọn trạm'),
-                            onChanged: (String? newValue) {
-                              setState(() {
-                                dropdownStationValue = newValue;
-                              });
-                            },
-                            items: stations.map<DropdownMenuItem<String>>((
-                              station,
-                            ) {
-                              return DropdownMenuItem<String>(
-                                value: station.id,
-                                child: Padding(
-                                  padding: const EdgeInsets.all(8.0),
-                                  child: Text(station.stationName),
-                                ),
-                              );
-                            }).toList(),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<String>(
+                      isExpanded: true,
+                      value: dropdownValue,
+                      onChanged: (String? newValue) {
+                        setState(() {
+                          dropdownValue = newValue!;
+                          isCreatingSensor = newValue == 'Sensor';
+                        });
+                      },
+                                                  items: <String>['Công tắc', 'Sensor', 'Hồng ngoại', 'Đồng hồ nước', 'Trạm bơm']
+                          .map<DropdownMenuItem<String>>((String value) {
+                        return DropdownMenuItem<String>(
+                          value: value,
+                          child: Padding(
+                            padding: const EdgeInsets.all(8.0),
+                            child: Text(value),
                           ),
                         );
-                      } else if (state is StationLoading) {
-                        return Center(child: CircularProgressIndicator());
-                      } else if (state is StationError) {
-                        return Center(child: Text('Error: ${state.message}'));
-                      } else {
-                        return Center(child: Text('No stations available'));
-                      }
-                    },
-                  ),
-                ),
-                Container(
-                  padding: EdgeInsets.all(10.0),
-                  margin: EdgeInsets.symmetric(vertical: 10),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: Colors.grey, width: 1.0),
-                  ),
-                  child: BlocBuilder<DeviceBloc, DeviceState>(
-                    builder: (context, state) {
-                      if (state is DeviceLoaded) {
-                        final deviceTypes = state.devices;
-                        final deviceTypeIds = deviceTypes
-                            .map((d) => d.id)
-                            .toSet()
-                            .toList();
-
-                        if (dropdownDeviceTypeId == null ||
-                            !deviceTypeIds.contains(dropdownDeviceTypeId)) {
-                          WidgetsBinding.instance.addPostFrameCallback((_) {
-                            setState(() {
-                              dropdownDeviceTypeId = deviceTypes.isNotEmpty
-                                  ? deviceTypes.first.id
-                                  : null;
-                              dropdownDeviceTypeName = deviceTypes.isNotEmpty
-                                  ? deviceTypes.first.name
-                                  : null;
-                              isCreatingSensor =
-                                  dropdownDeviceTypeName == 'Sensor';
-                            });
-                          });
-                        }
-
-                        return DropdownButtonHideUnderline(
-                          child: DropdownButton<String>(
-                            isExpanded: true,
-                            value: dropdownDeviceTypeId,
-                            onChanged: (String? newValue) {
-                              if (newValue == null) return;
-                              final selectedType = deviceTypes.firstWhere(
-                                (d) => d.id == newValue,
-                              );
-                              setState(() {
-                                dropdownDeviceTypeId = newValue;
-                                dropdownDeviceTypeName = selectedType.name;
-                                isCreatingSensor =
-                                    dropdownDeviceTypeName == 'Sensor';
-                              });
-                            },
-                            items: deviceTypes.map<DropdownMenuItem<String>>((
-                              deviceType,
-                            ) {
-                              return DropdownMenuItem<String>(
-                                value: deviceType.id,
-                                child: Padding(
-                                  padding: const EdgeInsets.all(8.0),
-                                  child: Text(deviceType.name),
-                                ),
-                              );
-                            }).toList(),
-                          ),
-                        );
-                      } else if (state is DeviceLoading) {
-                        return Center(child: CircularProgressIndicator());
-                      } else if (state is DeviceError) {
-                        return Center(child: Text('Error: ${state.message}'));
-                      } else {
-                        return Center(child: Text('No device types available'));
-                      }
-                    },
+                      }).toList(),
+                    ),
                   ),
                 ),
                 (isCreatingSensor)
@@ -346,7 +173,10 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> {
                         margin: EdgeInsets.only(bottom: 20),
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: Colors.grey, width: 1.0),
+                          border: Border.all(
+                            color: Colors.grey,
+                            width: 1.0,
+                          ),
                         ),
                         child: DropdownButtonHideUnderline(
                           child: DropdownButton<String>(
@@ -359,15 +189,14 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> {
                             },
                             items: <String>['Nhiệt độ', 'Độ ẩm']
                                 .map<DropdownMenuItem<String>>((String value) {
-                                  return DropdownMenuItem<String>(
-                                    value: value,
-                                    child: Padding(
-                                      padding: const EdgeInsets.all(8.0),
-                                      child: Text(value),
-                                    ),
-                                  );
-                                })
-                                .toList(),
+                              return DropdownMenuItem<String>(
+                                value: value,
+                                child: Padding(
+                                  padding: const EdgeInsets.all(8.0),
+                                  child: Text(value),
+                                ),
+                              );
+                            }).toList(),
                           ),
                         ),
                       )
@@ -377,8 +206,7 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> {
                   maxLength: 14,
                   decoration: InputDecoration(
                     border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
+                        borderRadius: BorderRadius.circular(10)),
                     labelText: 'Serial thiết bị',
                   ),
                 ),
@@ -387,8 +215,7 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> {
                   maxLength: 14,
                   decoration: InputDecoration(
                     border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
+                        borderRadius: BorderRadius.circular(10)),
                     labelText: 'Tên thiết bị',
                   ),
                 ),
@@ -429,62 +256,15 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> {
           ),
           (Platform.isAndroid)
               ? ElevatedButton(
-                  onPressed: isLoading
-                      ? null
-                      : () {
-                          if (dropdownDeviceTypeId != null &&
-                              dropdownDeviceTypeName != null) {
-                            _addDevice(
-                              dropdownDeviceTypeId!,
-                              dropdownDeviceTypeName!,
-                            );
-                          } else {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                  content: Text(
-                                      'Vui lòng chọn loại thiết bị')),
-                            );
-                          }
-                        },
-                  child: isLoading
-                      ? SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              Colors.white,
-                            ),
-                          ),
-                        )
-                      : Text("Thêm thiết bị"),
-                )
+                  onPressed: () {
+                    _addDevice(dropdownValue);
+                  },
+                  child: Text("Thêm thiết bị"))
               : CupertinoButton(
-                  onPressed: isLoading
-                      ? null
-                      : () {
-                          if (dropdownDeviceTypeId != null &&
-                              dropdownDeviceTypeName != null) {
-                            _addDevice(
-                              dropdownDeviceTypeId!,
-                              dropdownDeviceTypeName!,
-                            );
-                          } else {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                  content: Text(
-                                      'Vui lòng chọn loại thiết bị')),
-                            );
-                          }
-                        },
-                  child: isLoading
-                      ? SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CupertinoActivityIndicator(),
-                        )
-                      : Text("Thêm thiết bị"),
-                ),
+                  child: Text("Thêm thiết bị"),
+                  onPressed: () {
+                    _addDevice(dropdownValue);
+                  }),
         ],
       ),
     );

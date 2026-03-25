@@ -1,10 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 
-export 'package:permission_handler/permission_handler.dart' show Permission, PermissionStatus;
-export 'package:permission_handler/permission_handler.dart'
-  show PermissionActions, PermissionListActions, ServicePermissionActions;
-
 class PermissionHelper {
   static Future<bool> checkAndRequestPermissions(BuildContext context) async {
     Map<Permission, PermissionStatus> permissions = await [
@@ -56,7 +52,7 @@ class PermissionHelper {
             ElevatedButton(
               onPressed: () {
                 Navigator.pop(context);
-                openPermissionSettings();
+                openAppSettings();
               },
               child: const Text('Mở Cài Đặt'),
             ),
@@ -110,14 +106,9 @@ class PermissionHelper {
           ? null 
           : IconButton(
               icon: const Icon(Icons.settings),
-              onPressed: openPermissionSettings,
+              onPressed: openAppSettings,
             ),
       ),
     );
   }
-}
-
-// Global function for opening app settings
-Future<bool> openPermissionSettings() async {
-  return openAppSettings();
 }

@@ -1,16 +1,13 @@
 // ignore_for_file: avoid_print
 
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-// import 'package:fluttertoast/fluttertoast.dart';
-import '../utils/toast_helper.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:iot_app/repository/api_service.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class RegisterScreen extends StatefulWidget {
-  const RegisterScreen({Key? key}) : super(key: key);
+  RegisterScreen({Key? key}) : super(key: key);
 
   @override
   State<RegisterScreen> createState() => _RegisterScreenState();
@@ -19,6 +16,7 @@ class RegisterScreen extends StatefulWidget {
 class _RegisterScreenState extends State<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
   bool _isButtonTapped = false;
+  bool _isRegisterError = false;
   bool _isTermsAccepted = false;
   String _result = '';
 
@@ -39,111 +37,26 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   final _apiService = ApiService();
 
-  static final RegExp _fullNameRegex = RegExp(
-    r"^[\p{L}\p{M}\s\.,\-']+$",
-    unicode: true,
-  );
-  static final RegExp _userNameRegex = RegExp(r'^[a-zA-Z0-9._-]+$');
-  static final RegExp _emailRegex = RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$');
-  static final RegExp _phoneRegex = RegExp(r'^(\+84|0)(3|5|7|8|9)\d{8}$');
-
-  String? _validateFullName(String? value) {
-    final fullName = value?.trim() ?? '';
-
-    if (fullName.isEmpty) {
-      return 'Vui lòng nhập họ và tên';
-    }
-    if (fullName.length < 2 || fullName.length > 60) {
-      return 'Họ và tên phải từ 2 đến 60 ký tự';
-    }
-    if (!_fullNameRegex.hasMatch(fullName)) {
-      return 'Họ và tên chứa ký tự không hợp lệ';
-    }
-
-    return null;
-  }
-
-  String? _validateUserName(String? value) {
-    final userName = value?.trim() ?? '';
-
-    if (userName.isEmpty) {
-      return 'Vui lòng nhập tài khoản người dùng';
-    }
-    if (userName.length < 4 || userName.length > 30) {
-      return 'Tài khoản phải từ 4 đến 30 ký tự';
-    }
-    if (!_userNameRegex.hasMatch(userName)) {
-      return 'Tài khoản chỉ gồm chữ, số, dấu chấm, gạch dưới hoặc gạch ngang';
-    }
-
-    return null;
-  }
-
-  String? _validatePassword(String? value) {
-    final passWord = value ?? '';
-
-    if (passWord.isEmpty) {
-      return 'Vui lòng nhập mật khẩu';
-    }
-    if (passWord.length < 8 || passWord.length > 64) {
-      return 'Mật khẩu phải từ 8 đến 64 ký tự';
-    }
-    if (!RegExp(r'[A-Z]').hasMatch(passWord) ||
-        !RegExp(r'[a-z]').hasMatch(passWord) ||
-        !RegExp(r'\d').hasMatch(passWord)) {
-      return 'Mật khẩu cần có chữ hoa, chữ thường và số';
-    }
-
-    return null;
-  }
-
-  String? _validateEmail(String? value) {
-    final email = value?.trim() ?? '';
-
-    if (email.isEmpty) {
-      return 'Vui lòng nhập email';
-    }
-    if (!_emailRegex.hasMatch(email)) {
-      return 'Email không hợp lệ';
-    }
-
-    return null;
-  }
-
-  String? _validatePhone(String? value) {
-    final phone = value?.trim() ?? '';
-
-    if (phone.isEmpty) {
-      return 'Vui lòng nhập số điện thoại';
-    }
-    if (!_phoneRegex.hasMatch(phone)) {
-      return 'Số điện thoại không hợp lệ (VD: 09xxxxxxxx hoặc +849xxxxxxxx)';
-    }
-
-    return null;
-  }
-
-  String? _validateAddress(String? value) {
-    final address = value?.trim() ?? '';
-
-    if (address.isEmpty) {
-      return 'Vui lòng nhập địa chỉ';
-    }
-    if (address.length < 5 || address.length > 200) {
-      return 'Địa chỉ phải từ 5 đến 200 ký tự';
-    }
-
-    return null;
-  }
-
   // function to sign up
-  Future<bool> _signUp() async {
-    final fullName = _fullNameController.text.trim();
-    final userName = _userNameController.text.trim();
+  Future<void> _signUp() async {
+    final fullName = _fullNameController.text;
+    final userName = _userNameController.text;
     final passWord = _passWordController.text;
-    final email = _emailController.text.trim();
-    final phone = _phoneController.text.trim();
-    final address = _addressController.text.trim();
+    final email = _emailController.text;
+    final phone = _phoneController.text;
+    final address = _addressController.text;
+
+    if (!_isTermsAccepted) {
+      // If terms are not accepted, show error toast
+      Fluttertoast.showToast(
+        msg: "Bạn phải đồng ý với các điều khoản Nhà Của Tôi",
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.BOTTOM,
+        backgroundColor: Colors.red,
+        textColor: Colors.white,
+      );
+      return;
+    }
 
     try {
       final result = await _apiService.signUp({
@@ -157,126 +70,24 @@ class _RegisterScreenState extends State<RegisterScreen> {
       print(result);
       // await _userRepository.saveUserData(result['Data']);
       // await _userRepository.saveLoginStatus(true); // Save login status
-      _result = '';
-      return true;
-    } on TimeoutException {
-      _result = 'Yêu cầu đăng ký bị timeout. Vui lòng thử lại.';
-      return false;
-    } on FormatException {
-      _result = 'Dữ liệu trả về không hợp lệ. Vui lòng thử lại sau.';
-      return false;
     } catch (e) {
+      // Handle the error here
       print("Error: $e");
+      _isRegisterError = true;
       _result = e.toString().replaceFirst('Exception: ', '');
-      return false;
+      setState(() {
+        _isButtonTapped = false; // Reset the button color
+      });
     }
   }
 
-  Future<void> _launchURL() async {
+  void _launchURL() async {
     const url = 'http://nhacuatoi.com.vn:5001/index.php/services/privacy';
-    final uri = Uri.tryParse(url);
-
-    if (uri == null) {
-      Fluttertoast.showToast(
-        msg: 'Liên kết điều khoản không hợp lệ',
-        toastLength: Toast.LENGTH_SHORT,
-        gravity: ToastGravity.BOTTOM,
-        backgroundColor: Colors.red,
-        textColor: Colors.white,
-      );
-      return;
+    if (await canLaunchUrl(Uri.parse(url))) {
+      await launchUrl(Uri.parse(url));
+    } else {
+      throw 'Could not launch $url';
     }
-
-    try {
-      final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
-      if (!launched && mounted) {
-        _showErrorDialog('Không thể mở điều khoản', 'Vui lòng thử lại sau.');
-      }
-    } catch (_) {
-      if (!mounted) {
-        return;
-      }
-      _showErrorDialog('Lỗi mở liên kết', 'Không thể mở trang điều khoản.');
-    }
-  }
-
-  Future<void> _handleRegister() async {
-    if (_isButtonTapped) {
-      return;
-    }
-
-    FocusScope.of(context).unfocus();
-
-    if (!(_formKey.currentState?.validate() ?? false)) {
-      Fluttertoast.showToast(
-        msg: 'Vui lòng kiểm tra lại dữ liệu đăng ký',
-        toastLength: Toast.LENGTH_SHORT,
-        gravity: ToastGravity.BOTTOM,
-        backgroundColor: Colors.red,
-        textColor: Colors.white,
-      );
-      return;
-    }
-
-    if (!_isTermsAccepted) {
-      Fluttertoast.showToast(
-        msg: 'Bạn phải đồng ý với các điều khoản Nhà Của Tôi',
-        toastLength: Toast.LENGTH_SHORT,
-        gravity: ToastGravity.BOTTOM,
-        backgroundColor: Colors.red,
-        textColor: Colors.white,
-      );
-      return;
-    }
-
-    setState(() {
-      _isButtonTapped = true;
-    });
-
-    final success = await _signUp();
-    if (!mounted) {
-      return;
-    }
-
-    setState(() {
-      _isButtonTapped = false;
-    });
-
-    if (success) {
-      Fluttertoast.showToast(
-        msg: 'Đăng ký thành công!',
-        toastLength: Toast.LENGTH_SHORT,
-        gravity: ToastGravity.BOTTOM,
-        timeInSecForIosWeb: 1,
-        backgroundColor: Theme.of(context).primaryColor,
-        textColor: Colors.white,
-        fontSize: 16.0,
-      );
-      Navigator.pushNamed(context, '/login');
-      return;
-    }
-
-    _showErrorDialog('Đăng ký thất bại', 'Chi tiết: $_result');
-  }
-
-  void _showErrorDialog(String title, String message) {
-    showDialog<void>(
-      context: context,
-      builder: (context) {
-        return AlertDialog.adaptive(
-          title: Text(title),
-          content: Text(message),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: const Text('OK'),
-            ),
-          ],
-        );
-      },
-    );
   }
 
   @override
@@ -286,12 +97,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
     _emailFocusNode.dispose();
     _phoneFocusNode.dispose();
     _addressFocusNode.dispose();
-    _fullNameController.dispose();
-    _userNameController.dispose();
-    _passWordController.dispose();
-    _emailController.dispose();
-    _phoneController.dispose();
-    _addressController.dispose();
     super.dispose();
   }
 
@@ -305,7 +110,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
             children: [
               Form(
                 key: _formKey,
-                autovalidateMode: AutovalidateMode.onUserInteraction,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -319,7 +123,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               borderRadius: BorderRadius.circular(10)),
                           labelText: 'Họ và tên',
                         ),
-                        validator: _validateFullName,
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Vui lòng nhập họ và tên';
+                          }
+                          if (!RegExp(r'^[\p{L}\p{M}\p{Z}\p{P}]+$',
+                              unicode: true)
+                              .hasMatch(value)) {
+                            return 'Họ và tên chỉ có thể chứa các ký tự chữ';
+                          }
+                          return null;
+                        },
                         onFieldSubmitted: (_) =>
                             _userNameFocusNode.requestFocus(),
                       ),
@@ -335,10 +149,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               borderRadius: BorderRadius.circular(10)),
                           labelText: 'Tài khoản dùng',
                         ),
-                        inputFormatters: [
-                          FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z0-9._-]')),
-                        ],
-                        validator: _validateUserName,
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Vui lòng nhập tài khoản người dùng';
+                          }
+                          // only allow alphanumeric characters
+                          if (!RegExp(r'^[a-zA-Z0-9]+$').hasMatch(value)) {
+                            return 'Tài khoản người dùng chỉ có thể chứa các ký tự chữ và số, không dấu, không cách';
+                          }
+                          return null;
+                        },
                         onFieldSubmitted: (_) =>
                             _passWordFocusNode.requestFocus(),
                       ),
@@ -355,7 +175,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               borderRadius: BorderRadius.circular(10)),
                           labelText: 'Mật khẩu',
                         ),
-                        validator: _validatePassword,
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Vui lòng nhập mật khẩu';
+                          }
+                          return null;
+                        },
                         onFieldSubmitted: (_) => _emailFocusNode.requestFocus(),
                       ),
                     ),
@@ -371,7 +196,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               borderRadius: BorderRadius.circular(10)),
                           labelText: 'Email',
                         ),
-                        validator: _validateEmail,
+
                         onFieldSubmitted: (_) => _phoneFocusNode.requestFocus(),
                       ),
                     ),
@@ -387,10 +212,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               borderRadius: BorderRadius.circular(10)),
                           labelText: 'Số điện thoại',
                         ),
-                        inputFormatters: [
-                          FilteringTextInputFormatter.allow(RegExp(r'[0-9+]')),
-                        ],
-                        validator: _validatePhone,
+
                         onFieldSubmitted: (_) =>
                             _addressFocusNode.requestFocus(),
                       ),
@@ -406,7 +228,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               borderRadius: BorderRadius.circular(10)),
                           labelText: 'Địa chỉ',
                         ),
-                        validator: _validateAddress,
+
                       ),
                     ),
                     const SizedBox(height: 10),
@@ -442,7 +264,60 @@ class _RegisterScreenState extends State<RegisterScreen> {
               ),
               const SizedBox(height: 20),
               GestureDetector(
-                onTap: _isButtonTapped ? null : _handleRegister,
+                onTapDown: (details) {
+                  setState(() {
+                    _isButtonTapped = true;
+                  });
+                },
+                onTapUp: (details) async {
+                  if (_formKey.currentState?.validate() ?? false) {
+                    await _signUp();
+                    // show alert dialog
+                    if (_isRegisterError) {
+                      showDialog(
+                          context: context,
+                          builder: (context) {
+                            return AlertDialog.adaptive(
+                              title: const Text('Lỗi đăng nhập'),
+                              content: Text("Chi tiết: _result"),
+                              actions: [
+                                TextButton(
+                                  onPressed: () {
+                                    Navigator.of(context).pop();
+                                    _isRegisterError = false;
+                                  },
+                                  child: const Text('OK'),
+                                )
+                              ],
+                            );
+                          });
+                    } else {
+                      Fluttertoast.showToast(
+                          msg: "Đăng ký thành công!",
+                          toastLength: Toast.LENGTH_SHORT,
+                          gravity: ToastGravity.BOTTOM,
+                          timeInSecForIosWeb: 1,
+                          backgroundColor: Theme.of(context).primaryColor,
+                          textColor: Colors.white,
+                          fontSize: 16.0);
+                      Navigator.pushNamed(context, '/login');
+                    }
+                  } else {
+                    Fluttertoast.showToast(
+                        msg: "Vui lòng điền đầy đủ thông tin!",
+                        toastLength: Toast.LENGTH_SHORT,
+                        gravity: ToastGravity.BOTTOM,
+                        timeInSecForIosWeb: 1,
+                        backgroundColor: Colors.red,
+                        textColor: Colors.white,
+                        fontSize: 16.0);
+                  }
+                },
+                onTapCancel: () {
+                  setState(() {
+                    _isButtonTapped = false;
+                  });
+                },
                 child: Container(
                   padding: EdgeInsets.symmetric(
                       horizontal: MediaQuery.of(context).size.width * 0.2,
@@ -453,18 +328,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         ? Theme.of(context).highlightColor
                         : Theme.of(context).primaryColor,
                   ),
-                  child: _isButtonTapped
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                          ),
-                        )
-                      : const Text("Đăng ký",
-                          style: TextStyle(
-                              color: Colors.white, fontWeight: FontWeight.bold)),
+                  child: const Text("Đăng ký",
+                      style: TextStyle(
+                          color: Colors.white, fontWeight: FontWeight.bold)),
                 ),
               ),
             ],

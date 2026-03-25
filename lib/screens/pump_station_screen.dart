@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:iot_app/models/device.dart';
 import 'package:iot_app/repository/mqtt_manager.dart';
-import 'package:iot_app/database/database_helper.dart' if (dart.library.html) 'package:iot_app/database/web_database_helper.dart';
+import 'package:iot_app/database/database_helper.dart';
 import 'package:iot_app/screens/pump_station_management_screen.dart';
 import 'package:iot_app/widgets/device_detail_button_widget.dart';
 import 'package:mqtt_client/mqtt_client.dart';
@@ -43,13 +43,13 @@ class _PumpStationScreenState extends State<PumpStationScreen> {
   @override
   void initState() {
     super.initState();
-    _mqttManager = MQTTManager.instance;
+    _mqttManager = MQTTManager();
     _pumpStation = PumpStationDevice.createDefault(widget.device.deviceSerial, widget.device.deviceName);
     _initializeScreen();
   }
 
   Future<void> _initializeScreen() async {
-    await _mqttManager.ensureConnected();
+    await _mqttManager.connect();
     await _loadSubDevices();
     _subscribeToTopics();
     _startCooldownTimer();
@@ -864,9 +864,8 @@ class _PumpStationScreenState extends State<PumpStationScreen> {
     String command;
     
     // Mỗi máy bơm có 2 relay: 1 để bật, 1 để tắt
-    // THAY ĐỔI LOGIC: Khi nút hiển thị "BẬT" gửi "OFF", khi nút "TẮT" gửi "ON"
     if (newStatus) {
-      // Máy sẽ bật (nút hiện tại hiển thị "BẬT") → gửi lệnh OFF
+      // Bật máy bơm
       if (pump.number == 1) {
         relayNumber = 1; // Máy 1 bật → relay 1
       } else if (pump.number == 2) {
@@ -874,9 +873,8 @@ class _PumpStationScreenState extends State<PumpStationScreen> {
       } else {
         relayNumber = pump.number; // Các máy khác
       }
-      command = 'off'; // Gửi 'off' khi nút hiển thị "BẬT"
     } else {
-      // Máy sẽ tắt (nút hiện tại hiển thị "TẮT") → gửi lệnh ON
+      // Tắt máy bơm
       if (pump.number == 1) {
         relayNumber = 2; // Máy 1 tắt → relay 2
       } else if (pump.number == 2) {
@@ -884,8 +882,8 @@ class _PumpStationScreenState extends State<PumpStationScreen> {
       } else {
         relayNumber = pump.number; // Các máy khác
       }
-      command = 'on'; // Gửi 'on' khi nút hiển thị "TẮT"
     }
+    command = 'on'; // Luôn gửi 'on' để bật/tắt relay
     
     // Topic sử dụng serial + relay: NhaCuaToi_serial_relay_number
     final topic = 'NhaCuaToi_${pump.serial}_relay_$relayNumber';
@@ -898,7 +896,7 @@ class _PumpStationScreenState extends State<PumpStationScreen> {
       pump.serial,
       pump.number,
       relayNumber, // Sử dụng relayNumber để phân biệt từng nút bật/tắt
-      command == 'on', // Lưu true nếu command là 'on', false nếu command là 'off'
+      true, // Luôn lưu true vì ta luôn gửi lệnh 'on' cho relay
     );
     
     // Riêng với máy 3+, ta cần lưu thêm trạng thái thực tế của máy
@@ -943,9 +941,8 @@ class _PumpStationScreenState extends State<PumpStationScreen> {
     String command;
     
     // Mỗi cống phai có 2 relay: 1 để mở, 1 để đóng
-    // THAY ĐỔI LOGIC: Khi nút hiển thị "MỞ" gửi "OFF", khi nút "ĐÓNG" gửi "ON"
     if (newStatus) {
-      // Cống sẽ mở (nút hiện tại hiển thị "MỞ") → gửi lệnh OFF
+      // Mở cống phai
       if (gate.number == 1) {
         relayNumber = 1; // Cống 1 mở → relay 1
       } else if (gate.number == 2) {
@@ -953,9 +950,8 @@ class _PumpStationScreenState extends State<PumpStationScreen> {
       } else {
         relayNumber = gate.number; // Các cống khác
       }
-      command = 'off'; // Gửi 'off' khi nút hiển thị "MỞ"
     } else {
-      // Cống sẽ đóng (nút hiện tại hiển thị "ĐÓNG") → gửi lệnh ON
+      // Đóng cống phai
       if (gate.number == 1) {
         relayNumber = 2; // Cống 1 đóng → relay 2
       } else if (gate.number == 2) {
@@ -963,8 +959,8 @@ class _PumpStationScreenState extends State<PumpStationScreen> {
       } else {
         relayNumber = gate.number; // Các cống khác
       }
-      command = 'on'; // Gửi 'on' khi nút hiển thị "ĐÓNG"
     }
+    command = 'on'; // Luôn gửi 'on' để bật/tắt relay
     
     // Topic sử dụng serial + relay: NhaCuaToi_serial_relay_number
     final topic = 'NhaCuaToi_${gate.serial}_relay_$relayNumber';
@@ -977,7 +973,7 @@ class _PumpStationScreenState extends State<PumpStationScreen> {
       gate.serial,
       gate.number,
       relayNumber, // Sử dụng relayNumber để phân biệt từng nút mở/đóng
-      command == 'on', // Lưu true nếu command là 'on', false nếu command là 'off'
+      true, // Luôn lưu true vì ta luôn gửi lệnh 'on' cho relay
     );
     
     // Riêng với cống 3+, ta cần lưu thêm trạng thái thực tế của cống
@@ -1575,7 +1571,7 @@ class _PumpStationScreenState extends State<PumpStationScreen> {
   void dispose() {
     _cooldownTimer?.cancel();
     _statusUpdateTimer?.cancel();
-    // Don't dispose the singleton MQTTManager
+    _mqttManager.dispose();
     super.dispose();
   }
 }

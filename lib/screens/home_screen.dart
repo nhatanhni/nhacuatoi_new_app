@@ -106,7 +106,7 @@ class _HomeScreenState extends State<HomeScreen> {
         AspectRatio(
           aspectRatio: 16 / 9,
           child: Image.asset(
-            'assets/images/home-1.png',
+            'assets/images/home-1.jpg',
             fit: BoxFit.cover,
             alignment: Alignment.center,
           ),
@@ -129,7 +129,7 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         // Welcome text pinned to bottom-left
         Positioned(
-          bottom: 20,
+          bottom: 5,
           left: 20,
           right: 20,
           child: Column(
@@ -144,7 +144,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               const SizedBox(height: 4),
               Text(
-                'Nhà Của Tôi',
+                'Data Monitoring Platform',
                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                       color: Colors.white,
                       fontWeight: FontWeight.bold,

@@ -5,6 +5,7 @@ class Device {
   String deviceType;
   String deviceSerial;
   String deviceName;
+  String? mqTopic;
   String? sensorType; // temperature or humidity
   int? sensorThreshold; // threshold for sensor
   int deviceStatus;
@@ -18,6 +19,7 @@ class Device {
     required this.deviceType,
     required this.deviceSerial,
     required this.deviceName,
+    this.mqTopic,
     this.sensorType,
     this.sensorThreshold,
     required this.deviceStatus,
@@ -53,6 +55,7 @@ class Device {
         deviceType = map['deviceType'],
         deviceSerial = map['deviceSerial'],
         deviceName = map['deviceName'],
+        mqTopic = map['mqTopic'],
         sensorType = map['sensorType'],
         sensorThreshold = map['sensorThreshold'],
         deviceStatus = map['deviceStatus'],

@@ -168,6 +168,7 @@ class _DeviceListScreenState extends State<DeviceListScreen> {
                         deviceType: device.deviceType,
                         deviceSerial: device.deviceSerial,
                         deviceName: device.deviceName,
+                      mqTopic: device.mqTopic,
                         sensorType: device.sensorType,
                         sensorThreshold: device.sensorThreshold,
                         deviceStatus: device.deviceStatus,

@@ -3,6 +3,7 @@ import 'package:iot_app/bloc/device/device_event.dart';
 import 'package:iot_app/bloc/device/device_state.dart';
 import 'package:iot_app/database/database_helper.dart';
 import 'package:iot_app/models/device.dart';
+import 'package:iot_app/models/device_detail.dart';
 import 'package:iot_app/models/device_from_api.dart';
 import 'package:iot_app/repository/api_service.dart';
 
@@ -20,6 +21,7 @@ class DeviceBloc extends Bloc<DeviceEvent, DeviceState> {
     on<DeviceLoadAll>(_onLoadAll);
     on<DeviceLoadManageList>(_onLoadManageList);
     on<DeviceLoadManageNextPage>(_onLoadManageNextPage);
+    on<DeviceDetailRequested>(_onDeviceDetailRequested);
     on<DeviceLoadByType>(_onLoadByType);
     on<DeviceStatusUpdated>(_onStatusUpdated);
     on<DeviceConnectionStatusUpdated>(_onConnectionStatusUpdated);
@@ -166,6 +168,7 @@ class DeviceBloc extends Bloc<DeviceEvent, DeviceState> {
           .toString(),
       deviceSerial: (json['Serial'] ?? json['serial'] ?? '').toString(),
       deviceName: (json['Name'] ?? json['name'] ?? '').toString(),
+      mqTopic: (json['MqTopic'] ?? json['mqTopic'] ?? '').toString(),
       deviceStatus: (json['Startup'] == true) ? 1 : 0,
       connectionStatus: 'unknown',
     );
@@ -179,6 +182,20 @@ class DeviceBloc extends Bloc<DeviceEvent, DeviceState> {
     try {
       final devices = await databaseHelper.queryDevicesByType(event.deviceType);
       emit(DeviceLoaded([]));
+    } catch (e) {
+      emit(DeviceError(e.toString()));
+    }
+  }
+
+  Future<void> _onDeviceDetailRequested(
+    DeviceDetailRequested event,
+    Emitter<DeviceState> emit,
+  ) async {
+    emit(DeviceDetailLoading());
+    try {
+      final detailData = await apiService.fetchDeviceDetailById(event.deviceId);
+      final detail = DeviceDetail.fromJson(detailData);
+      emit(DeviceDetailLoaded(detail));
     } catch (e) {
       emit(DeviceError(e.toString()));
     }

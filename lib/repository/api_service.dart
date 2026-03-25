@@ -195,6 +195,39 @@ class ApiService {
     );
   }
 
+  // get device detail by id
+  Future<Map<String, dynamic>> fetchDeviceDetailById(String id) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('accessToken') ?? '';
+    final response = await http.get(
+      Uri.parse('$_baseUrl/api/Iot_Device/detail/$id'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception('Lỗi kết nối server: ${response.statusCode}');
+    }
+    if (response.body.isEmpty) {
+      throw Exception('Không có dữ liệu trả về từ server');
+    }
+
+    final responseBody = jsonDecode(response.body);
+    if (responseBody['Success'] == true) {
+      final data = responseBody['Data'];
+      if (data is Map<String, dynamic>) {
+        return data;
+      }
+      throw Exception('Dữ liệu chi tiết thiết bị không hợp lệ');
+    }
+
+    throw Exception(
+      responseBody['Message'] ?? 'Lấy chi tiết thiết bị thất bại',
+    );
+  }
+
   // create device on server
   Future<Map<String, dynamic>> createDevice(
     Map<String, dynamic> payload,

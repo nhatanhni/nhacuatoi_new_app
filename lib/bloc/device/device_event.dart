@@ -16,6 +16,15 @@ class DeviceLoadManageList extends DeviceEvent {}
 
 class DeviceLoadManageNextPage extends DeviceEvent {}
 
+class DeviceDetailRequested extends DeviceEvent {
+  final String deviceId;
+
+  const DeviceDetailRequested(this.deviceId);
+
+  @override
+  List<Object?> get props => [deviceId];
+}
+
 class DeviceLoadByType extends DeviceEvent {
   final String deviceType;
 

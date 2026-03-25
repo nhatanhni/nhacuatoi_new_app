@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import 'package:iot_app/models/device_detail.dart';
 import 'package:iot_app/models/device.dart';
 import 'package:iot_app/models/device_from_api.dart';
 
@@ -12,6 +13,8 @@ abstract class DeviceState extends Equatable {
 class DeviceInitial extends DeviceState {}
 
 class DeviceLoading extends DeviceState {}
+
+class DeviceDetailLoading extends DeviceState {}
 
 class DeviceLoaded extends DeviceState {
   final List<DeviceApi> devices;
@@ -47,6 +50,15 @@ class DeviceManageLoaded extends DeviceState {
     totalItems,
     isLoadingMore,
   ];
+}
+
+class DeviceDetailLoaded extends DeviceState {
+  final DeviceDetail detail;
+
+  const DeviceDetailLoaded(this.detail);
+
+  @override
+  List<Object?> get props => [detail];
 }
 
 class DeviceError extends DeviceState {

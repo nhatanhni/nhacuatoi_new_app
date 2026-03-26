@@ -44,16 +44,16 @@ class DeviceSocketMetricsTab extends StatelessWidget {
           ...metricsData!.entries.map((entry) => _buildMetricItem(context, entry)),
         ],
         const SizedBox(height: 14),
-        Text(
-          'JSON payload',
-          style: TextStyle(
-            fontSize: 17,
-            fontWeight: FontWeight.bold,
-            color: headlineColor,
-          ),
-        ),
-        const SizedBox(height: 8),
-        _buildJsonContainer(),
+        // Text(
+        //   'JSON payload',
+        //   style: TextStyle(
+        //     fontSize: 17,
+        //     fontWeight: FontWeight.bold,
+        //     color: headlineColor,
+        //   ),
+        // ),
+        // const SizedBox(height: 8),
+        // _buildJsonContainer(),
       ],
     );
   }
@@ -155,9 +155,8 @@ class DeviceSocketMetricsTab extends StatelessWidget {
   }
 
   Widget _buildMetricItem(BuildContext context, MapEntry<String, dynamic> entry) {
-    final value = entry.value is num
-        ? (entry.value as num).toStringAsFixed(2)
-        : entry.value.toString();
+    final label = _metricLabel(entry);
+    final value = _metricValue(entry.value);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
@@ -179,7 +178,7 @@ class DeviceSocketMetricsTab extends StatelessWidget {
         children: [
           Expanded(
             child: Text(
-              entry.key,
+              label,
               style: const TextStyle(fontWeight: FontWeight.w600),
             ),
           ),
@@ -194,6 +193,53 @@ class DeviceSocketMetricsTab extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  String _metricLabel(MapEntry<String, dynamic> entry) {
+    final raw = entry.value;
+    if (raw is Map<String, dynamic>) {
+      final dynamic label = raw['label'];
+      if (label is String && label.trim().isNotEmpty) {
+        return label;
+      }
+    }
+
+    return entry.key;
+  }
+
+  String _metricValue(dynamic raw) {
+    dynamic value = raw;
+    String? unit;
+
+    if (raw is Map<String, dynamic>) {
+      value = raw['value'];
+      final dynamic rawUnit = raw['unit'];
+      if (rawUnit is String && rawUnit.trim().isNotEmpty) {
+        unit = rawUnit;
+      }
+    }
+
+    final valueText = _formatMetricValue(value);
+    if (unit == null || valueText == '-') {
+      return valueText;
+    }
+
+    return '$valueText $unit';
+  }
+
+  String _formatMetricValue(dynamic value) {
+    if (value == null) {
+      return '-';
+    }
+
+    if (value is num) {
+      if (value % 1 == 0) {
+        return value.toStringAsFixed(0);
+      }
+      return value.toStringAsFixed(2);
+    }
+
+    return value.toString();
   }
 
   Widget _buildJsonContainer() {

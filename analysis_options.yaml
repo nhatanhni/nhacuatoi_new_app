@@ -10,8 +10,6 @@
 include: package:flutter_lints/flutter.yaml
 
 analyzer:
-  exclude:
-    - lib/screens/wifi_setup_screen_old.dart
 
 linter:
   # The lint rules applied to this project can be customized in the

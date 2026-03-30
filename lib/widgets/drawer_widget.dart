@@ -4,6 +4,7 @@ import 'package:iot_app/bloc/auth/auth_bloc.dart';
 import 'package:iot_app/bloc/auth/auth_event.dart';
 import 'package:iot_app/bloc/auth/auth_state.dart';
 import 'package:iot_app/repository/user_repository.dart';
+import 'package:iot_app/screens/station_camera_screen.dart';
 
 class AppDrawer extends StatefulWidget {
   const AppDrawer({Key? key}) : super(key: key);
@@ -100,6 +101,16 @@ class _AppDrawerState extends State<AppDrawer> {
               // navigate to AddDeviceScreen
               Navigator.of(context).pop();
               Navigator.pushNamed(context, "/device_list");
+            },
+          ),
+          ListTile(
+            leading: const Icon(
+              Icons.videocam_rounded,
+            ),
+            title: const Text('Giám sát camera'),
+            onTap: () {
+              Navigator.of(context).pop();
+              Navigator.pushNamed(context, StationCameraScreen.routeName);
             },
           ),
           const Divider(),

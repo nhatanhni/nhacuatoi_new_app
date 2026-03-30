@@ -24,6 +24,7 @@ import 'package:shimmer/shimmer.dart';
 import 'package:syncfusion_flutter_gauges/gauges.dart';
 import 'package:iot_app/repository/api_service.dart';
 import 'package:iot_app/utils/socket_metrics_parser.dart';
+import 'package:iot_app/core/state/selected_device_provider.dart';
 
 import '../widgets/drawer_widget.dart';
 
@@ -209,6 +210,7 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen>
   @override
   void initState() {
     super.initState();
+    setSelectedDevice(context, widget.device);
     _tabController = TabController(length: 3, vsync: this);
     // Use the singleton MQTT manager - no need to create new connections
     mqttManager = MQTTManager.instance;
@@ -979,11 +981,8 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen>
                   title: 'Hẹn giờ',
                   shouldDisplayDotIndicator: false,
                   onTap: () {
-                    Navigator.pushNamed(
-                      context,
-                      '/device_schedule',
-                      arguments: widget.device,
-                    );
+                    setSelectedDevice(context, widget.device);
+                    Navigator.pushNamed(context, '/device_schedule');
                     mqttManager.ensureConnected();
                   },
                 ),
@@ -1024,11 +1023,8 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen>
                   icon: Icons.water,
                   title: 'Quản lý',
                   onTap: () {
-                    Navigator.pushNamed(
-                      context,
-                      '/pump_station',
-                      arguments: widget.device,
-                    );
+                    setSelectedDevice(context, widget.device);
+                    Navigator.pushNamed(context, '/pump_station');
                   },
                 ),
             ],

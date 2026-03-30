@@ -22,26 +22,6 @@
             "request": "launch",
             "type": "dart",
             "flutterMode": "release"
-        },
-        {
-            "name": "temp_project",
-            "cwd": "temp_project",
-            "request": "launch",
-            "type": "dart"
-        },
-        {
-            "name": "temp_project (profile mode)",
-            "cwd": "temp_project",
-            "request": "launch",
-            "type": "dart",
-            "flutterMode": "profile"
-        },
-        {
-            "name": "temp_project (release mode)",
-            "cwd": "temp_project",
-            "request": "launch",
-            "type": "dart",
-            "flutterMode": "release"
         }
     ]
 }

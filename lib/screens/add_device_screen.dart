@@ -253,7 +253,10 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> {
                                 value: station.id,
                                 child: Padding(
                                   padding: const EdgeInsets.all(8.0),
-                                  child: Text(station.stationName),
+                                  child: Text(
+                                    station.stationName,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
                                 ),
                               );
                             }).toList(),

@@ -9,8 +9,8 @@ import 'package:iot_app/repository/mqtt_manager.dart';
 import 'package:iot_app/widgets/appbar_dropdown_widget.dart';
 import 'package:iot_app/widgets/drawer_widget.dart';
 import 'package:iot_app/models/device.dart';
+import 'package:iot_app/core/state/selected_device_provider.dart';
 import 'package:iot_app/screens/device_detail_screen.dart';
-import 'package:iot_app/screens/pump_station_screen.dart';
 import 'package:mqtt_client/mqtt_client.dart';
 
 class DeviceListScreen extends StatefulWidget {
@@ -231,23 +231,16 @@ class _DeviceListScreenState extends State<DeviceListScreen> {
   }
 
   void _openDeviceDetail(Device device) {
+    setSelectedDevice(context, device);
+
     if (device.deviceType == 'Trạm bơm') {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => PumpStationScreen(device: device),
-        ),
-      ).then((value) {
+      Navigator.pushNamed(context, '/pump_station').then((value) {
         manager.ensureConnected();
       });
       return;
     }
 
-    Navigator.pushNamed(
-      context,
-      DeviceDetailScreen.routeName,
-      arguments: device,
-    ).then((value) {
+    Navigator.pushNamed(context, DeviceDetailScreen.routeName).then((value) {
       manager.ensureConnected();
     });
   }

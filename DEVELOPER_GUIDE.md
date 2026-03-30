@@ -15,7 +15,8 @@
 7. [Convention đặt tên](#7-convention-đặt-tên)
 8. [Luồng dữ liệu từ đầu đến cuối](#8-luồng-dữ-liệu-từ-đầu-đến-cuối)
 9. [Hướng dẫn thêm tính năng mới](#9-hướng-dẫn-thêm-tính-năng-mới)
-10. [Các lỗi thường gặp](#10-các-lỗi-thường-gặp)
+10. [Chiến lược Hybrid BLoC + Riverpod](#10-chiến-lược-hybrid-bloc--riverpod)
+11. [Các lỗi thường gặp](#11-các-lỗi-thường-gặp)
 
 ---
 
@@ -506,7 +507,77 @@ BlocBuilder<WaterBloc, WaterState>(
 
 ---
 
-## 10. Các lỗi thường gặp
+## 10. Chiến lược Hybrid BLoC + Riverpod
+
+Từ phiên bản hiện tại, dự án áp dụng mô hình **hybrid state management**:
+- **BLoC** cho luồng nghiệp vụ có side-effect (API, MQTT, DB, flow nhiều bước).
+- **Riverpod** cho state global nhẹ, state UI chia sẻ và state local có persistence đơn giản.
+
+### 10.1 Quy tắc chọn công cụ
+
+| Trường hợp | Nên dùng | Lý do |
+|---|---|---|
+| Gọi API, retry, pagination, error mapping | BLoC | Event/state rõ ràng, dễ trace và test flow |
+| MQTT stream, subscribe/unsubscribe, background handling | BLoC | Có lifecycle và side-effect phức tạp |
+| Global UI state (tab index, filter, sort, toggle) | Riverpod | Nhẹ, ít ceremony, dễ dùng xuyên màn hình |
+| Key-value persistence đơn giản (SharedPreferences) | Riverpod Notifier/AsyncNotifier | Tách logic lưu/đọc khỏi widget, tránh setState rải rác |
+
+### 10.2 Rule bắt buộc khi dùng hybrid
+
+- Không thay thế BLoC hiện có nếu feature đang ổn định và liên quan API/MQTT.
+- Không gọi API trực tiếp từ Riverpod provider trong app này (giữ API tập trung qua Repository + BLoC).
+- Widget không đọc `SharedPreferences` trực tiếp; ưu tiên đi qua Riverpod notifier/repository để tái sử dụng.
+- Khi state cần chia sẻ giữa nhiều màn, đặt provider dưới `lib/core/state/`.
+
+### 10.3 Cấu trúc đã thêm
+
+```text
+lib/
+  core/
+    state/
+      app_shell_provider.dart
+      station_camera_preferences_provider.dart
+```
+
+- `app_shell_provider.dart`: global state cho tab index của main shell.
+- `station_camera_preferences_provider.dart`: quản lý URL camera theo station (load/save/remove qua SharedPreferences).
+
+### 10.4 Bootstrap Riverpod
+
+App được bọc `ProviderScope` ở `main.dart`, sau đó vẫn giữ nguyên `MultiBlocProvider` cho các luồng nghiệp vụ hiện tại.
+
+```dart
+runApp(const ProviderScope(child: MyApp(initialRoute: '/')));
+```
+
+### 10.5 Ví dụ chuẩn trong dự án
+
+- `MainShell`: dùng Riverpod cho tab index (global UI state).
+- `StationCameraScreen`: vẫn dùng `StationBloc` để load danh sách trạm, nhưng dùng Riverpod để quản lý camera URL preferences và selected station.
+
+Mẫu phối hợp đúng:
+
+```dart
+final cameraUrlsState = ref.watch(stationCameraUrlsProvider);
+
+body: BlocBuilder<StationBloc, StationState>(
+  builder: (context, state) {
+    // BLoC: data từ API
+    // Riverpod: state nhẹ + persistence
+  },
+)
+```
+
+### 10.6 Checklist khi thêm feature mới
+
+1. Feature có API/MQTT/DB hoặc flow nhiều bước? => Tạo/đổi BLoC.
+2. Feature chỉ là state UI chia sẻ hoặc key-value nhẹ? => Tạo Riverpod provider.
+3. Nếu feature có cả hai: dùng BLoC cho business data, Riverpod cho presentation state.
+4. Viết test theo đúng lớp: bloc test cho luồng nghiệp vụ, provider test cho state nhẹ.
+
+---
+
+## 11. Các lỗi thường gặp
 
 ### `Could not find the correct Provider<XxxBloc>`
 

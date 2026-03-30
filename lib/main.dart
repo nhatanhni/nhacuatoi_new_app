@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:iot_app/bloc/auth/auth_bloc.dart';
 import 'package:iot_app/bloc/auth/auth_event.dart';
 import 'package:iot_app/bloc/device/device_bloc.dart';
@@ -30,7 +31,10 @@ import 'package:iot_app/screens/register_screen.dart';
 import 'package:workmanager/workmanager.dart';
 import 'package:iot_app/screens/pump_station_screen.dart';
 import 'package:iot_app/screens/wifi_setup_screen.dart';
+import 'package:iot_app/screens/station_camera_screen.dart';
 import 'package:iot_app/widgets/drawer_widget.dart';
+import 'package:iot_app/core/state/app_shell_provider.dart';
+import 'package:iot_app/core/state/selected_device_provider.dart';
 
 import 'database/database_helper.dart';
 import 'widgets/notification_service.dart';
@@ -39,19 +43,19 @@ import 'widgets/notification_service.dart';
 void callbackDispatcher() {
   Workmanager().executeTask((task, inputData) async {
     print('Background task executed: $task');
-    
+
     final mqttManager = MQTTManager.instance;
     await mqttManager.connect();
-    
+
     await Future.delayed(Duration(seconds: 5));
-    
+
     return Future.value(true);
   });
 }
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   if (!kIsWeb) {
     await dotenv.load();
   }
@@ -79,7 +83,7 @@ Future<void> main() async {
       SystemUiMode.edgeToEdge,
       overlays: [SystemUiOverlay.top, SystemUiOverlay.bottom],
     );
-    
+
     SystemChrome.setSystemUIOverlayStyle(
       const SystemUiOverlayStyle(
         statusBarIconBrightness: Brightness.dark,
@@ -91,12 +95,14 @@ Future<void> main() async {
     );
   }
 
-  runApp(const MyApp(initialRoute: '/'));
+  runApp(const ProviderScope(child: MyApp(initialRoute: '/')));
 }
 
 class MyApp extends StatelessWidget {
-  static final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
-  static final RouteObserver<ModalRoute<void>> routeObserver = RouteObserver<ModalRoute<void>>();
+  static final GlobalKey<NavigatorState> navigatorKey =
+      GlobalKey<NavigatorState>();
+  static final RouteObserver<ModalRoute<void>> routeObserver =
+      RouteObserver<ModalRoute<void>>();
 
   // Create shared instances once — NOT inside build() to avoid recreating on every rebuild
   static final _apiService = ApiService();
@@ -116,21 +122,19 @@ class MyApp extends StatelessWidget {
     return MultiBlocProvider(
       providers: [
         BlocProvider<AuthBloc>(
-          create: (_) => AuthBloc(
-            apiService: _apiService,
-            userRepository: _userRepository,
-          )..add(AuthCheckRequested()),
+          create: (_) =>
+              AuthBloc(apiService: _apiService, userRepository: _userRepository)
+                ..add(AuthCheckRequested()),
         ),
         BlocProvider<DeviceBloc>(
           create: (_) => DeviceBloc(
             databaseHelper: databaseHelper,
             apiService: _apiService,
-          )..add(DeviceLoadAll())
+          )..add(DeviceLoadAll()),
         ),
         BlocProvider<StationBloc>(
-          create: (_) => StationBloc(
-            apiService: _apiService,
-          )..add(StationLoadAll()),
+          create: (_) =>
+              StationBloc(apiService: _apiService)..add(StationLoadAll()),
         ),
         BlocProvider<MqttBloc>(
           create: (_) => MqttBloc(
@@ -139,10 +143,7 @@ class MyApp extends StatelessWidget {
           )..add(MqttConnectRequested()),
         ),
       ],
-      child: _AppView(
-        initialRoute: initialRoute,
-        device: device,
-      ),
+      child: _AppView(initialRoute: initialRoute, device: device),
     );
   }
 }
@@ -205,25 +206,54 @@ class _AppViewState extends State<_AppView> {
         '/user_list': (context) => UserListScreen(),
         '/home': (context) => const MainShell(),
         '/wifi_setup': (context) => WiFiSetupScreen(),
+        StationCameraScreen.routeName: (context) => const StationCameraScreen(),
       },
       navigatorObservers: [MyApp.routeObserver],
       onGenerateRoute: (settings) {
+        Device? resolveNavigatedDevice() {
+          final argumentDevice = settings.arguments is Device
+              ? settings.arguments as Device
+              : null;
+
+          if (argumentDevice != null) {
+            setSelectedDevice(context, argumentDevice);
+            return argumentDevice;
+          }
+
+          return readSelectedDevice(context) ?? widget.device;
+        }
+
         if (settings.name == DeviceDetailScreen.routeName) {
-          final device = settings.arguments as Device? ?? widget.device;
+          final device = resolveNavigatedDevice();
+          if (device == null) {
+            return MaterialPageRoute(
+              builder: (context) => const _MissingDeviceRouteScreen(),
+            );
+          }
           return MaterialPageRoute(
             builder: (context) {
-              return DeviceDetailScreen(device: device!);
+              return DeviceDetailScreen(device: device);
             },
           );
         } else if (settings.name == DeviceSchedulingScreen.routeName) {
-          final device = settings.arguments as Device;
+          final device = resolveNavigatedDevice();
+          if (device == null) {
+            return MaterialPageRoute(
+              builder: (context) => const _MissingDeviceRouteScreen(),
+            );
+          }
           return MaterialPageRoute(
             builder: (context) {
               return DeviceSchedulingScreen(device: device);
             },
           );
         } else if (settings.name == '/pump_station') {
-          final device = settings.arguments as Device;
+          final device = resolveNavigatedDevice();
+          if (device == null) {
+            return MaterialPageRoute(
+              builder: (context) => const _MissingDeviceRouteScreen(),
+            );
+          }
           return MaterialPageRoute(
             builder: (context) {
               return PumpStationScreen(device: device);
@@ -237,27 +267,52 @@ class _AppViewState extends State<_AppView> {
   }
 }
 
-class MainShell extends StatefulWidget {
+class _MissingDeviceRouteScreen extends StatelessWidget {
+  const _MissingDeviceRouteScreen();
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Khong tim thay thiet bi')),
+      body: const Center(
+        child: Padding(
+          padding: EdgeInsets.all(24),
+          child: Text(
+            'Khong tim thay du lieu thiet bi de mo man hinh nay.',
+            textAlign: TextAlign.center,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class MainShell extends ConsumerStatefulWidget {
   final int initialIndex;
 
   const MainShell({super.key, this.initialIndex = 0});
 
   @override
-  State<MainShell> createState() => _MainShellState();
+  ConsumerState<MainShell> createState() => _MainShellState();
 }
 
-class _MainShellState extends State<MainShell> {
+class _MainShellState extends ConsumerState<MainShell> {
   static const _activeColor = Color(0xFF403AB7);
   static const _inactiveColor = Color(0xFFD2E0EE);
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
-
-  late int _index = widget.initialIndex;
 
   late final List<Widget> _pages;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final currentIndex = ref.read(appShellIndexProvider);
+      if (currentIndex != widget.initialIndex) {
+        ref.read(appShellIndexProvider.notifier).state = widget.initialIndex;
+      }
+    });
+
     _pages = <Widget>[
       HomeScreen(rootScaffoldKey: _scaffoldKey),
       DeviceListScreen(rootScaffoldKey: _scaffoldKey),
@@ -267,8 +322,10 @@ class _MainShellState extends State<MainShell> {
   }
 
   void _onTap(int nextIndex) {
-    if (nextIndex == _index) return;
-    setState(() => _index = nextIndex);
+    if (nextIndex == ref.read(appShellIndexProvider)) {
+      return;
+    }
+    ref.read(appShellIndexProvider.notifier).state = nextIndex;
   }
 
   Widget _navItem({
@@ -310,6 +367,7 @@ class _MainShellState extends State<MainShell> {
 
   @override
   Widget build(BuildContext context) {
+    final index = ref.watch(appShellIndexProvider);
     final isLandscape =
         MediaQuery.of(context).orientation == Orientation.landscape;
 
@@ -317,7 +375,7 @@ class _MainShellState extends State<MainShell> {
       key: _scaffoldKey,
       extendBody: true,
       drawer: const AppDrawer(),
-      body: IndexedStack(index: _index, children: _pages),
+      body: IndexedStack(index: index, children: _pages),
       floatingActionButtonLocation: isLandscape
           ? null
           : FloatingActionButtonLocation.centerDocked,
@@ -349,26 +407,26 @@ class _MainShellState extends State<MainShell> {
                   _navItem(
                     icon: Icons.home_rounded,
                     label: 'Home',
-                    active: _index == 0,
+                    active: index == 0,
                     onTap: () => _onTap(0),
                   ),
                   _navItem(
                     icon: Icons.schedule_rounded,
                     label: 'Schedule',
-                    active: _index == 1,
+                    active: index == 1,
                     onTap: () => _onTap(1),
                   ),
                   const SizedBox(width: 75),
                   _navItem(
                     icon: Icons.description_rounded,
                     label: 'Scripts',
-                    active: _index == 2,
+                    active: index == 2,
                     onTap: () => _onTap(2),
                   ),
                   _navItem(
                     icon: Icons.settings_rounded,
                     label: 'Settings',
-                    active: _index == 3,
+                    active: index == 3,
                     onTap: () => _onTap(3),
                   ),
                 ],

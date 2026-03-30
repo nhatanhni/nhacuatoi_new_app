@@ -9,6 +9,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:iot_app/bloc/device/device_bloc.dart';
 import 'package:iot_app/bloc/device/device_event.dart';
 import 'package:iot_app/bloc/device/device_state.dart';
+import 'package:iot_app/core/state/selected_device_provider.dart';
 import '../utils/toast_helper.dart';
 import 'package:iot_app/models/device.dart';
 import 'package:iot_app/screens/device_detail_screen.dart';
@@ -180,11 +181,8 @@ class _ManageDeviceScreenState extends State<ManageDeviceScreen> {
     return InkWell(
       borderRadius: BorderRadius.circular(18),
       onTap: () {
-        Navigator.pushNamed(
-          context,
-          DeviceDetailScreen.routeName,
-          arguments: device,
-        );
+        setSelectedDevice(context, device);
+        Navigator.pushNamed(context, DeviceDetailScreen.routeName);
       },
       child: Ink(
         decoration: BoxDecoration(

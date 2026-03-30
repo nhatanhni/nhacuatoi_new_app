@@ -3,6 +3,7 @@ import '../widgets/drawer_widget.dart';
 import '../widgets/top_bar.dart';
 import '../database/database_helper.dart'
     if (dart.library.html) '../database/web_database_helper.dart';
+import '../core/state/selected_device_provider.dart';
 import 'device_detail_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -42,11 +43,8 @@ class _HomeScreenState extends State<HomeScreen> {
         print(
           'Navigating to DeviceDetailScreen with device: ${device.deviceSerial}',
         );
-        Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (context) => DeviceDetailScreen(device: device),
-          ),
-        );
+        setSelectedDevice(context, device);
+        Navigator.of(context).pushNamed(DeviceDetailScreen.routeName);
 
         // Xóa trạng thái thông báo sau khi xử lý
         final prefs = await SharedPreferences.getInstance();
@@ -67,11 +65,8 @@ class _HomeScreenState extends State<HomeScreen> {
         notificationPayload,
       );
       if (device != null) {
-        Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (context) => DeviceDetailScreen(device: device),
-          ),
-        );
+        setSelectedDevice(context, device);
+        Navigator.of(context).pushNamed(DeviceDetailScreen.routeName);
 
         // Xóa trạng thái thông báo sau khi xử lý
         await prefs.remove('notification_payload');

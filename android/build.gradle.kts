@@ -1,3 +1,6 @@
+import com.android.build.gradle.LibraryExtension
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+
 allprojects {
     repositories {
         maven { url = uri("https://maven.aliyun.com/repository/google") }
@@ -17,6 +20,20 @@ subprojects {
 }
 subprojects {
     project.evaluationDependsOn(":app")
+}
+
+subprojects {
+    if (name == "qr_code_scanner") {
+        plugins.withId("com.android.library") {
+            extensions.configure<LibraryExtension> {
+                namespace = "net.touchcapture.qr.flutterqr"
+            }
+        }
+
+        tasks.withType<KotlinCompile>().configureEach {
+            kotlinOptions.jvmTarget = "1.8"
+        }
+    }
 }
 
 tasks.register<Delete>("clean") {

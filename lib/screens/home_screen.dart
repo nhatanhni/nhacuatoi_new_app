@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import '../widgets/drawer_widget.dart';
 import '../widgets/top_bar.dart';
-import '../database/database_helper.dart' if (dart.library.html) '../database/web_database_helper.dart';
+import '../database/database_helper.dart'
+    if (dart.library.html) '../database/web_database_helper.dart';
 import 'device_detail_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -38,7 +39,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
       // Kiểm tra xem device có phải là null không
       if (device != null && mounted) {
-        print('Navigating to DeviceDetailScreen with device: ${device.deviceSerial}');
+        print(
+          'Navigating to DeviceDetailScreen with device: ${device.deviceSerial}',
+        );
         Navigator.of(context).push(
           MaterialPageRoute(
             builder: (context) => DeviceDetailScreen(device: device),
@@ -60,7 +63,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
     if (notificationPayload != null && mounted) {
       // Điều hướng đến màn hình chi tiết thiết bị với payload đã lưu
-      final device = await DatabaseHelper.instance.queryDeviceBySerial(notificationPayload);
+      final device = await DatabaseHelper.instance.queryDeviceBySerial(
+        notificationPayload,
+      );
       if (device != null) {
         Navigator.of(context).push(
           MaterialPageRoute(
@@ -87,14 +92,53 @@ class _HomeScreenState extends State<HomeScreen> {
       key: _scaffoldKey,
       appBar: FigmaTopBar(scaffoldKey: drawerKey),
       drawer: widget.rootScaffoldKey == null ? const AppDrawer() : null,
-      body: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            _buildHeroBanner(context),
-            _buildQuickActions(context),
-            const SizedBox(height: 16),
-          ],
+      body: OrientationBuilder(
+        builder: (context, orientation) {
+          return LayoutBuilder(
+            builder: (context, constraints) {
+              if (orientation == Orientation.landscape) {
+                return _buildLandscapeBody(context, constraints);
+              }
+
+              return _buildPortraitBody(context);
+            },
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildPortraitBody(BuildContext context) {
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _buildHeroBanner(context),
+          _buildQuickActions(context),
+          const SizedBox(height: 16),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLandscapeBody(BuildContext context, BoxConstraints constraints) {
+    final horizontalPadding = constraints.maxWidth >= 1200 ? 24.0 : 16.0;
+    final actionColumns = constraints.maxWidth >= 1500 ? 3 : 2;
+
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+        horizontalPadding,
+        16,
+        horizontalPadding,
+        16,
+      ),
+      child: SingleChildScrollView(
+        child: _buildQuickActions(
+          context,
+          padding: EdgeInsets.zero,
+          crossAxisCount: actionColumns,
+          childAspectRatio: actionColumns == 3 ? 1.6 : 1.75,
+          itemHeight: MediaQuery.of(context).size.height / 3,
         ),
       ),
     );
@@ -132,40 +176,50 @@ class _HomeScreenState extends State<HomeScreen> {
           bottom: 5,
           left: 20,
           right: 20,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Xin chào!',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Colors.white70,
-                      letterSpacing: 0.5,
-                    ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'Data Monitoring Platform',
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 0.3,
-                    ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'Quản lý thiết bị thông minh của bạn',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Colors.white70,
-                    ),
-              ),
-            ],
-          ),
+          child: _buildHeroText(context),
         ),
       ],
     );
   }
 
-  Widget _buildQuickActions(BuildContext context) {
+  Widget _buildHeroText(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Xin chào!',
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            color: Colors.white70,
+            letterSpacing: 0.5,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'Data Monitoring Platform',
+          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+            letterSpacing: 0.3,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'Quản lý thiết bị thông minh của bạn',
+          style: Theme.of(
+            context,
+          ).textTheme.bodySmall?.copyWith(color: Colors.white70),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildQuickActions(
+    BuildContext context, {
+    EdgeInsetsGeometry padding = const EdgeInsets.fromLTRB(16, 20, 16, 0),
+    int crossAxisCount = 2,
+    double childAspectRatio = 1.6,
+    double? itemHeight,
+  }) {
     const actions = [
       _QuickAction(
         icon: Icons.devices_outlined,
@@ -198,7 +252,7 @@ class _HomeScreenState extends State<HomeScreen> {
     ];
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
+      padding: padding,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -216,23 +270,34 @@ class _HomeScreenState extends State<HomeScreen> {
               const SizedBox(width: 8),
               Text(
                 'Chức năng nhanh',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
               ),
             ],
           ),
           const SizedBox(height: 14),
-          GridView.count(
-            crossAxisCount: 2,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 12,
-            childAspectRatio: 1.35,
-            children: actions
-                .map((action) => _buildActionCard(context, action))
-                .toList(),
+          LayoutBuilder(
+            builder: (context, gridConstraints) {
+              const spacing = 10.0;
+              final itemWidth =
+                  (gridConstraints.maxWidth - (crossAxisCount - 1) * spacing) /
+                  crossAxisCount;
+              final effectiveAspectRatio =
+                  itemHeight != null ? itemWidth / itemHeight : childAspectRatio;
+
+              return GridView.count(
+                crossAxisCount: crossAxisCount,
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                crossAxisSpacing: spacing,
+                mainAxisSpacing: spacing,
+                childAspectRatio: effectiveAspectRatio,
+                children: actions
+                    .map((action) => _buildActionCard(context, action))
+                    .toList(),
+              );
+            },
           ),
         ],
       ),
@@ -241,26 +306,26 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildActionCard(BuildContext context, _QuickAction action) {
     return Card(
-      elevation: 2,
+      elevation: 1.5,
       shadowColor: action.color.withValues(alpha: 0.25),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       child: InkWell(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(14),
         onTap: () => Navigator.pushNamed(context, action.route),
         child: Padding(
-          padding: const EdgeInsets.all(14),
+          padding: const EdgeInsets.all(10),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               // Icon with tinted background
               Container(
-                padding: const EdgeInsets.all(8),
+                padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
                   color: action.color.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(8),
                 ),
-                child: Icon(action.icon, color: action.color, size: 22),
+                child: Icon(action.icon, color: action.color, size: 20),
               ),
               // Label + subtitle
               Column(
@@ -269,9 +334,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   Text(
                     action.label,
                     style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.w600,
-                          height: 1.2,
-                        ),
+                      fontWeight: FontWeight.w600,
+                      height: 1.2,
+                    ),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -279,9 +344,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   Text(
                     action.subtitle,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Colors.grey[600],
-                          fontSize: 11,
-                        ),
+                      color: Colors.grey[600],
+                      fontSize: 10,
+                    ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),

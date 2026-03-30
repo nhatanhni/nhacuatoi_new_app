@@ -310,61 +310,70 @@ class _MainShellState extends State<MainShell> {
 
   @override
   Widget build(BuildContext context) {
+    final isLandscape =
+        MediaQuery.of(context).orientation == Orientation.landscape;
+
     return Scaffold(
       key: _scaffoldKey,
       extendBody: true,
       drawer: const AppDrawer(),
       body: IndexedStack(index: _index, children: _pages),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-      floatingActionButton: SizedBox(
-        height: 56,
-        width: 56,
-        child: FloatingActionButton(
-          elevation: 6,
-          backgroundColor: _activeColor,
-          foregroundColor: Colors.white,
-          shape: const CircleBorder(),
-          onPressed: () => Navigator.of(context).pushNamed('/add_device'),
-          child: const Icon(Icons.add, size: 24),
-        ),
-      ),
-      bottomNavigationBar: BottomAppBar(
-        height: 101,
-        color: Colors.white,
-        elevation: 10,
-        shadowColor: Colors.black.withValues(alpha: 0.12),
-        shape: const CircularNotchedRectangle(),
-        notchMargin: 8,
-        child: Row(
-          children: [
-            _navItem(
-              icon: Icons.home_rounded,
-              label: 'Home',
-              active: _index == 0,
-              onTap: () => _onTap(0),
+      floatingActionButtonLocation: isLandscape
+          ? null
+          : FloatingActionButtonLocation.centerDocked,
+      floatingActionButton: isLandscape
+          ? null
+          : SizedBox(
+              height: 56,
+              width: 56,
+              child: FloatingActionButton(
+                elevation: 6,
+                backgroundColor: _activeColor,
+                foregroundColor: Colors.white,
+                shape: const CircleBorder(),
+                onPressed: () => Navigator.of(context).pushNamed('/add_device'),
+                child: const Icon(Icons.add, size: 24),
+              ),
             ),
-            _navItem(
-              icon: Icons.schedule_rounded,
-              label: 'Schedule',
-              active: _index == 1,
-              onTap: () => _onTap(1),
+      bottomNavigationBar: isLandscape
+          ? null
+          : BottomAppBar(
+              height: 101,
+              color: Colors.white,
+              elevation: 10,
+              shadowColor: Colors.black.withValues(alpha: 0.12),
+              shape: const CircularNotchedRectangle(),
+              notchMargin: 8,
+              child: Row(
+                children: [
+                  _navItem(
+                    icon: Icons.home_rounded,
+                    label: 'Home',
+                    active: _index == 0,
+                    onTap: () => _onTap(0),
+                  ),
+                  _navItem(
+                    icon: Icons.schedule_rounded,
+                    label: 'Schedule',
+                    active: _index == 1,
+                    onTap: () => _onTap(1),
+                  ),
+                  const SizedBox(width: 75),
+                  _navItem(
+                    icon: Icons.description_rounded,
+                    label: 'Scripts',
+                    active: _index == 2,
+                    onTap: () => _onTap(2),
+                  ),
+                  _navItem(
+                    icon: Icons.settings_rounded,
+                    label: 'Settings',
+                    active: _index == 3,
+                    onTap: () => _onTap(3),
+                  ),
+                ],
+              ),
             ),
-            const SizedBox(width: 75),
-            _navItem(
-              icon: Icons.description_rounded,
-              label: 'Scripts',
-              active: _index == 2,
-              onTap: () => _onTap(2),
-            ),
-            _navItem(
-              icon: Icons.settings_rounded,
-              label: 'Settings',
-              active: _index == 3,
-              onTap: () => _onTap(3),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

@@ -168,7 +168,7 @@ class _DeviceListScreenState extends State<DeviceListScreen> {
                         deviceType: device.deviceType,
                         deviceSerial: device.deviceSerial,
                         deviceName: device.deviceName,
-                      mqTopic: device.mqTopic,
+                        mqTopic: device.mqTopic,
                         sensorType: device.sensorType,
                         sensorThreshold: device.sensorThreshold,
                         deviceStatus: device.deviceStatus,
@@ -230,6 +230,319 @@ class _DeviceListScreenState extends State<DeviceListScreen> {
     }
   }
 
+  void _openDeviceDetail(Device device) {
+    if (device.deviceType == 'Trạm bơm') {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => PumpStationScreen(device: device),
+        ),
+      ).then((value) {
+        manager.ensureConnected();
+      });
+      return;
+    }
+
+    Navigator.pushNamed(
+      context,
+      DeviceDetailScreen.routeName,
+      arguments: device,
+    ).then((value) {
+      manager.ensureConnected();
+    });
+  }
+
+  Widget _buildFilterChips(List<String> filters, {required bool isLandscape}) {
+    final chips = filters.map((String value) {
+      final isSelected = _selectedFilter == value;
+      return Padding(
+        padding: EdgeInsets.symmetric(
+          horizontal: isLandscape ? 0 : 6,
+          vertical: isLandscape ? 4 : 0,
+        ),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(32),
+          onTap: () {
+            setState(() {
+              _selectedFilter = value;
+              _applyFilter(value);
+            });
+          },
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 160),
+            curve: Curves.easeOut,
+            padding: EdgeInsets.symmetric(
+              horizontal: isLandscape ? 14 : 24,
+              vertical: isLandscape ? 10 : 16,
+            ),
+            decoration: BoxDecoration(
+              color: isSelected ? Theme.of(context).primaryColor : Colors.white,
+              borderRadius: BorderRadius.circular(32),
+              boxShadow: isSelected
+                  ? null
+                  : const [
+                      BoxShadow(
+                        color: Color(0x14000000),
+                        blurRadius: 18,
+                        offset: Offset(0, 8),
+                      ),
+                    ],
+            ),
+            child: Text(
+              value,
+              style: TextStyle(
+                fontSize: isLandscape ? 14 : 15,
+                height: isLandscape ? 1.25 : 22 / 15,
+                fontWeight: FontWeight.w500,
+                color: isSelected ? Colors.white : const Color(0xFF130F26),
+              ),
+            ),
+          ),
+        ),
+      );
+    }).toList();
+
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(children: chips),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 28),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              height: 84,
+              width: 84,
+              decoration: BoxDecoration(
+                color: Colors.blue.withOpacity(0.12),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.router_rounded,
+                size: 42,
+                color: Colors.blue[700],
+              ),
+            ),
+            const SizedBox(height: 14),
+            const Text(
+              'Hiện chưa có thiết bị nào',
+              style: TextStyle(
+                fontSize: 19,
+                fontWeight: FontWeight.w700,
+                color: Colors.black87,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLoadingMoreIndicator() {
+    return const Padding(
+      padding: EdgeInsets.symmetric(vertical: 16),
+      child: Center(child: CircularProgressIndicator.adaptive()),
+    );
+  }
+
+  Widget _buildDeviceCard(Device device) {
+    Color accentColor = Colors.deepPurple;
+    IconData iconData = Icons.devices;
+    final normalized = device.deviceType.toLowerCase();
+    if (normalized.contains('bơm')) {
+      accentColor = Colors.indigo;
+      iconData = Icons.water;
+    } else if (normalized.contains('nước thải')) {
+      accentColor = Colors.blue;
+      iconData = Icons.water_drop_outlined;
+    } else if (normalized.contains('mực nước')) {
+      accentColor = Colors.blue;
+      iconData = Icons.waves;
+    } else if (normalized.contains('điện') || normalized.contains('công tắc')) {
+      accentColor = Colors.orange;
+      iconData = Icons.electrical_services;
+    } else if (normalized.contains('khí thải')) {
+      accentColor = Colors.teal;
+      iconData = Icons.air;
+    } else if (normalized.contains('khí tượng')) {
+      accentColor = Colors.teal;
+      iconData = Icons.cloud;
+    } else if (normalized.contains('nước sinh hoạt')) {
+      accentColor = Colors.blue;
+      iconData = Icons.local_drink;
+    } else if (normalized.contains('sensor')) {
+      accentColor = Colors.deepPurple;
+      iconData = Icons.sensors;
+    }
+
+    return InkWell(
+      borderRadius: BorderRadius.circular(18),
+      onTap: () => _openDeviceDetail(device),
+      child: Ink(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(18),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [accentColor.withOpacity(0.14), Colors.white],
+          ),
+          border: Border.all(color: accentColor.withOpacity(0.24)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.06),
+              offset: const Offset(0, 8),
+              blurRadius: 16,
+            ),
+          ],
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        child: Row(
+          children: [
+            Container(
+              height: 54,
+              width: 54,
+              decoration: BoxDecoration(
+                color: accentColor.withOpacity(0.18),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Icon(iconData, color: accentColor, size: 30),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    device.deviceName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 17,
+                      color: Color(0xFF222222),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: accentColor.withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      device.deviceType,
+                      style: TextStyle(
+                        color: accentColor,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Container(
+              margin: const EdgeInsets.only(left: 8),
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: _getConnectionStatusColor(device.connectionStatus),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(
+                _getConnectionStatusIcon(device.connectionStatus),
+                color: Colors.white,
+                size: 18,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDeviceContent({required bool isLandscape}) {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator.adaptive());
+    }
+
+    if (_devices.isEmpty) {
+      return _buildEmptyState();
+    }
+
+    if (!isLandscape) {
+      return ListView.builder(
+        controller: _scrollController,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        itemCount: _devices.length + (_isLoadingMore ? 1 : 0),
+        itemBuilder: (context, index) {
+          if (index == _devices.length) {
+            return _buildLoadingMoreIndicator();
+          }
+
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: _buildDeviceCard(_devices[index]),
+          );
+        },
+      );
+    }
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth < 760) {
+          return ListView.builder(
+            controller: _scrollController,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            itemCount: _devices.length + (_isLoadingMore ? 1 : 0),
+            itemBuilder: (context, index) {
+              if (index == _devices.length) {
+                return _buildLoadingMoreIndicator();
+              }
+
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: _buildDeviceCard(_devices[index]),
+              );
+            },
+          );
+        }
+
+        int crossAxisCount = 2;
+        if (constraints.maxWidth >= 1500) {
+          crossAxisCount = 4;
+        } else if (constraints.maxWidth >= 1180) {
+          crossAxisCount = 3;
+        }
+
+        return GridView.builder(
+          controller: _scrollController,
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: crossAxisCount,
+            childAspectRatio: 2.6,
+            crossAxisSpacing: 12,
+            mainAxisSpacing: 12,
+          ),
+          itemCount: _devices.length + (_isLoadingMore ? 1 : 0),
+          itemBuilder: (context, index) {
+            if (index == _devices.length) {
+              return _buildLoadingMoreIndicator();
+            }
+
+            return _buildDeviceCard(_devices[index]);
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final deviceTypes =
@@ -240,6 +553,8 @@ class _DeviceListScreenState extends State<DeviceListScreen> {
             .toList()
           ..sort();
     final filters = ['Tất cả', ...deviceTypes];
+    final mediaQuery = MediaQuery.of(context);
+    final isLandscape = mediaQuery.orientation == Orientation.landscape;
 
     return Scaffold(
       key: _scaffoldKey,
@@ -319,276 +634,9 @@ class _DeviceListScreenState extends State<DeviceListScreen> {
             children: [
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 10),
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: filters.map((String value) {
-                      final isSelected = _selectedFilter == value;
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 6),
-                        child: InkWell(
-                          borderRadius: BorderRadius.circular(32),
-                          onTap: () {
-                            setState(() {
-                              _selectedFilter = value;
-                              _applyFilter(value);
-                            });
-                          },
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 160),
-                            curve: Curves.easeOut,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 24,
-                              vertical: 16,
-                            ),
-                            decoration: BoxDecoration(
-                              color: isSelected
-                                  ? Theme.of(context).primaryColor
-                                  : Colors.white,
-                              borderRadius: BorderRadius.circular(32),
-                              boxShadow: isSelected
-                                  ? null
-                                  : const [
-                                      BoxShadow(
-                                        color: Color(0x14000000),
-                                        blurRadius: 18,
-                                        offset: Offset(0, 8),
-                                      ),
-                                    ],
-                            ),
-                            child: Text(
-                              value,
-                              style: TextStyle(
-                                fontSize: 15,
-                                height: 22 / 15,
-                                fontWeight: FontWeight.w500,
-                                color: isSelected
-                                    ? Colors.white
-                                    : const Color(0xFF130F26),
-                              ),
-                            ),
-                          ),
-                        ),
-                      );
-                    }).toList(),
-                  ),
-                ),
+                child: _buildFilterChips(filters, isLandscape: isLandscape),
               ),
-              Expanded(
-                child: _isLoading
-                    ? const Center(child: CircularProgressIndicator.adaptive())
-                    : (_devices.isEmpty)
-                    ? Center(
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 28),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Container(
-                                height: 84,
-                                width: 84,
-                                decoration: BoxDecoration(
-                                  color: Colors.blue.withOpacity(0.12),
-                                  shape: BoxShape.circle,
-                                ),
-                                child: Icon(
-                                  Icons.router_rounded,
-                                  size: 42,
-                                  color: Colors.blue[700],
-                                ),
-                              ),
-                              const SizedBox(height: 14),
-                              const Text(
-                                'Hiện chưa có thiết bị nào',
-                                style: TextStyle(
-                                  fontSize: 19,
-                                  fontWeight: FontWeight.w700,
-                                  color: Colors.black87,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      )
-                    : ListView.builder(
-                        controller: _scrollController,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 8,
-                        ),
-                        itemCount: _devices.length + (_isLoadingMore ? 1 : 0),
-                        itemBuilder: (context, index) {
-                          if (index == _devices.length) {
-                            return const Padding(
-                              padding: EdgeInsets.symmetric(vertical: 16),
-                              child: Center(
-                                child: CircularProgressIndicator.adaptive(),
-                              ),
-                            );
-                          }
-
-                          final device = _devices[index];
-                          Color accentColor = Colors.deepPurple;
-                          IconData iconData = Icons.devices;
-                          final normalized = device.deviceType.toLowerCase();
-                          if (normalized.contains('bơm')) {
-                            accentColor = Colors.indigo;
-                            iconData = Icons.water;
-                          } else if (normalized.contains('nước thải')) {
-                            accentColor = Colors.blue;
-                            iconData = Icons.water_drop_outlined;
-                          } else if (normalized.contains('mực nước')) {
-                            accentColor = Colors.blue;
-                            iconData = Icons.waves;
-                          } else if (normalized.contains('điện') ||
-                              normalized.contains('công tắc')) {
-                            accentColor = Colors.orange;
-                            iconData = Icons.electrical_services;
-                          } else if (normalized.contains('khí thải')) {
-                            accentColor = Colors.teal;
-                            iconData = Icons.air;
-                          } else if (normalized.contains('khí tượng')) {
-                            accentColor = Colors.teal;
-                            iconData = Icons.cloud;
-                          } else if (normalized.contains('nước sinh hoạt')) {
-                            accentColor = Colors.blue;
-                            iconData = Icons.local_drink;
-                          } else if (normalized.contains('sensor')) {
-                            accentColor = Colors.deepPurple;
-                            iconData = Icons.sensors;
-                          }
-
-                          return Padding(
-                            padding: const EdgeInsets.only(bottom: 10),
-                            child: InkWell(
-                              borderRadius: BorderRadius.circular(18),
-                              onTap: () {
-                                if (device.deviceType == 'Trạm bơm') {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) =>
-                                          PumpStationScreen(device: device),
-                                    ),
-                                  ).then((value) {
-                                    manager.ensureConnected();
-                                  });
-                                } else {
-                                  Navigator.pushNamed(
-                                    context,
-                                    DeviceDetailScreen.routeName,
-                                    arguments: device,
-                                  ).then((value) {
-                                    manager.ensureConnected();
-                                  });
-                                }
-                              },
-                              child: Ink(
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(18),
-                                  gradient: LinearGradient(
-                                    begin: Alignment.topLeft,
-                                    end: Alignment.bottomRight,
-                                    colors: [
-                                      accentColor.withOpacity(0.14),
-                                      Colors.white,
-                                    ],
-                                  ),
-                                  border: Border.all(
-                                    color: accentColor.withOpacity(0.24),
-                                  ),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withOpacity(0.06),
-                                      offset: const Offset(0, 8),
-                                      blurRadius: 16,
-                                    ),
-                                  ],
-                                ),
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 14,
-                                  vertical: 12,
-                                ),
-                                child: Row(
-                                  children: [
-                                    Container(
-                                      height: 54,
-                                      width: 54,
-                                      decoration: BoxDecoration(
-                                        color: accentColor.withOpacity(0.18),
-                                        borderRadius: BorderRadius.circular(14),
-                                      ),
-                                      child: Icon(
-                                        iconData,
-                                        color: accentColor,
-                                        size: 30,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            device.deviceName,
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                            style: const TextStyle(
-                                              fontWeight: FontWeight.w700,
-                                              fontSize: 17,
-                                              color: Color(0xFF222222),
-                                            ),
-                                          ),
-                                          const SizedBox(height: 6),
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 10,
-                                              vertical: 4,
-                                            ),
-                                            decoration: BoxDecoration(
-                                              color: accentColor.withOpacity(
-                                                0.12,
-                                              ),
-                                              borderRadius:
-                                                  BorderRadius.circular(20),
-                                            ),
-                                            child: Text(
-                                              device.deviceType,
-                                              style: TextStyle(
-                                                color: accentColor,
-                                                fontWeight: FontWeight.w600,
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    Container(
-                                      margin: const EdgeInsets.only(left: 8),
-                                      padding: const EdgeInsets.all(6),
-                                      decoration: BoxDecoration(
-                                        color: _getConnectionStatusColor(
-                                          device.connectionStatus,
-                                        ),
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                      child: Icon(
-                                        _getConnectionStatusIcon(
-                                          device.connectionStatus,
-                                        ),
-                                        color: Colors.white,
-                                        size: 18,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-              ),
+              Expanded(child: _buildDeviceContent(isLandscape: isLandscape)),
             ],
           ),
         ),

@@ -49,6 +49,10 @@
 	</dict>
 	<key>NSLocationUsageDescription</key>
 	<string>Ứng dụng cần quyền vị trí để quét mạng WiFi và thiết lập thiết bị IoT.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>Ứng dụng cần quyền vị trí để quét, kết nối WiFi và hoàn tất cấu hình thiết bị IoT.</string>
+	<key>NSLocationAlwaysUsageDescription</key>
+	<string>Ứng dụng cần quyền vị trí để quét, kết nối WiFi và hoàn tất cấu hình thiết bị IoT.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Ứng dụng cần quyền vị trí để quét và kết nối mạng WiFi. Quyền này cần thiết để thiết lập thiết bị IoT.</string>
 	<key>NSUserNotificationUsageDescription</key>

@@ -9,7 +9,6 @@ class PermissionHelper {
   static Future<bool> checkAndRequestPermissions(BuildContext context) async {
     Map<Permission, PermissionStatus> permissions = await [
       Permission.camera,
-      Permission.location,
       Permission.locationWhenInUse,
     ].request();
 
@@ -21,7 +20,6 @@ class PermissionHelper {
           case Permission.camera:
             deniedPermissions.add('Camera (để quét QR code)');
             break;
-          case Permission.location:
           case Permission.locationWhenInUse:
             deniedPermissions.add('Vị trí (để quét WiFi)');
             break;

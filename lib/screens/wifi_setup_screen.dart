@@ -114,10 +114,8 @@ class _WiFiSetupScreenState extends State<WiFiSetupScreen> {
     print('📍 Yêu cầu quyền vị trí...');
     
     // Kiểm tra trạng thái hiện tại
-    final currentLocationStatus = await Permission.location.status;
     final currentLocationWhenInUseStatus = await Permission.locationWhenInUse.status;
     
-    print('📍 Current location status: $currentLocationStatus');
     print('📍 Current locationWhenInUse status: $currentLocationWhenInUseStatus');
     
     // Yêu cầu quyền location when in use trước
@@ -127,13 +125,6 @@ class _WiFiSetupScreenState extends State<WiFiSetupScreen> {
       print('📍 LocationWhenInUse request result: $locationWhenInUseStatus');
     }
     
-    // Yêu cầu quyền location chính xác
-    PermissionStatus locationStatus = currentLocationStatus;
-    if (locationStatus != PermissionStatus.granted) {
-      locationStatus = await Permission.location.request();
-      print('📍 Location request result: $locationStatus');
-    }
-    
     // Đối với Android 12+ cần thêm quyền này
     if (Platform.isAndroid) {
       final nearbyWifiDevicesStatus = await Permission.nearbyWifiDevices.request();
@@ -141,8 +132,7 @@ class _WiFiSetupScreenState extends State<WiFiSetupScreen> {
     }
     
     // Kiểm tra xem có cần mở cài đặt không
-    if (locationWhenInUseStatus == PermissionStatus.permanentlyDenied || 
-        locationStatus == PermissionStatus.permanentlyDenied) {
+    if (locationWhenInUseStatus == PermissionStatus.permanentlyDenied) {
       
       if (mounted) {
         showDialog(
@@ -173,8 +163,7 @@ class _WiFiSetupScreenState extends State<WiFiSetupScreen> {
     }
     
     // Kiểm tra và thông báo trạng thái cuối cùng
-    if (locationWhenInUseStatus != PermissionStatus.granted && 
-        locationStatus != PermissionStatus.granted) {
+    if (locationWhenInUseStatus != PermissionStatus.granted) {
       _showMessage('Cần quyền vị trí để quét WiFi. Vui lòng cấp quyền và thử lại.');
     } else {
       _showMessage('Quyền đã được cấp. Bây giờ có thể quét WiFi.');
@@ -183,7 +172,6 @@ class _WiFiSetupScreenState extends State<WiFiSetupScreen> {
     // Kiểm tra và hiển thị trạng thái tất cả quyền
     final permissions = await [
       Permission.camera,
-      Permission.location,
       Permission.locationWhenInUse,
     ].request();
     
@@ -1137,14 +1125,11 @@ class _WiFiSetupScreenState extends State<WiFiSetupScreen> {
       print('🔍 Bắt đầu quét WiFi 2.4GHz...');
       
       // Kiểm tra quyền vị trí trước
-      final locationStatus = await Permission.location.status;
       final locationWhenInUseStatus = await Permission.locationWhenInUse.status;
       
-      print('📍 Location permission: $locationStatus');
       print('📍 LocationWhenInUse permission: $locationWhenInUseStatus');
       
-      if (locationStatus != PermissionStatus.granted && 
-          locationWhenInUseStatus != PermissionStatus.granted) {
+      if (locationWhenInUseStatus != PermissionStatus.granted) {
         // Yêu cầu quyền lại
         final newLocationStatus = await Permission.locationWhenInUse.request();
         if (newLocationStatus != PermissionStatus.granted) {

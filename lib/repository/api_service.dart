@@ -279,6 +279,46 @@ class ApiService {
     throw Exception(responseBody['Message'] ?? 'Xoa thiet bi that bai');
   }
 
+  // get organization units (flattened tree from /api/Sys_Organization/tree)
+  Future<List<dynamic>> fetchOrganizationUnits() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('accessToken') ?? '';
+    final response = await http.get(
+      Uri.parse('$_baseUrl/api/Sys_Organization/tree'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    );
+    if (response.statusCode != 200) {
+      throw Exception('Lỗi kết nối server: ${response.statusCode}');
+    }
+    if (response.body.isEmpty) {
+      throw Exception('Không có dữ liệu trả về từ server');
+    }
+    final responseBody = jsonDecode(response.body);
+    if (responseBody['Success'] == true) {
+      final tree = responseBody['Data'] as List<dynamic>;
+      final flat = <dynamic>[];
+      _flattenOrgTree(tree, flat);
+      return flat;
+    }
+    throw Exception(
+      responseBody['Message'] ?? 'Lấy danh sách đơn vị thất bại',
+    );
+  }
+
+  void _flattenOrgTree(List<dynamic> nodes, List<dynamic> result) {
+    for (final node in nodes) {
+      result.add(node);
+      final children =
+          (node as Map<String, dynamic>)['Children'] as List<dynamic>?;
+      if (children != null && children.isNotEmpty) {
+        _flattenOrgTree(children, result);
+      }
+    }
+  }
+
   // get all stations
   Future<List<dynamic>> fetchStations() async {
     final prefs = await SharedPreferences.getInstance();

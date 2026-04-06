@@ -12,11 +12,9 @@ import 'package:uuid/uuid.dart';
 import 'package:iot_app/bloc/device/device_bloc.dart';
 import 'package:iot_app/bloc/device/device_event.dart';
 import 'package:iot_app/bloc/device/device_state.dart';
-import 'package:iot_app/bloc/station/station_bloc.dart';
-import 'package:iot_app/bloc/station/station_event.dart';
-import 'package:iot_app/bloc/station/station_state.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import '../widgets/appbar_back_to_home_widget.dart';
+import 'package:iot_app/bloc/organization/organization_bloc.dart';
+import 'package:iot_app/bloc/organization/organization_event.dart';
+import 'package:iot_app/bloc/organization/organization_state.dart';
 import '../widgets/appbar_dropdown_widget.dart';
 
 class AddDeviceScreen extends StatefulWidget {
@@ -31,7 +29,7 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> {
       TextEditingController();
   TextEditingController _deviceNameTextEditingController =
       TextEditingController();
-  String? dropdownStationValue;
+  String? dropdownOrgValue;
   String? dropdownDeviceTypeId;
   String? dropdownDeviceTypeName;
   String dropdownSensorValue = 'Nhiệt độ';
@@ -79,10 +77,10 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> {
       return;
     }
 
-    if (dropdownStationValue == null) {
+    if (dropdownOrgValue == null) {
       ScaffoldMessenger.of(
         localContext,
-      ).showSnackBar(SnackBar(content: Text('Vui lòng chọn trạm')));
+      ).showSnackBar(SnackBar(content: Text('Vui lòng chọn đơn vị')));
       return;
     }
 
@@ -92,19 +90,15 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> {
       });
 
       final position = await _getCurrentPosition();
-      final prefs = await SharedPreferences.getInstance();
-      final stationId = dropdownStationValue!;
+      final orgId = dropdownOrgValue!;
 
       final uuid = Uuid();
       final payload = {
         'Id': uuid.v4(),
         'IdDeviceType': deviceTypeId,
         'DeviceTypeId': deviceTypeId,
-        'ManagementUnitId': prefs.getString('managementUnitId') ?? stationId,
-        'IdDonVi': prefs.getString('idDonVi') ?? stationId,
-        'StationId': stationId,
-        'SelectedStationId': stationId,
-        'ParentId': stationId,
+        'ManagementUnitId': orgId,
+        'OrganizationId': orgId,
         'Serial': serial,
         'Name': name,
         'Model': '',
@@ -194,7 +188,7 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> {
   void initState() {
     super.initState();
     context.read<DeviceBloc>().add(DeviceLoadAll());
-    context.read<StationBloc>().add(StationLoadAll());
+    context.read<OrganizationBloc>().add(OrganizationLoadAll());
   }
 
   @override
@@ -203,7 +197,6 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> {
       appBar: AppBar(
         centerTitle: true,
         title: Text("Thêm thiết bị"),
-        leading: AppBarBackToHome(),
         actions: [AppBarDropdown()],
       ),
       body: Column(
@@ -219,18 +212,18 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> {
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(color: Colors.grey, width: 1.0),
                   ),
-                  child: BlocBuilder<StationBloc, StationState>(
+                  child: BlocBuilder<OrganizationBloc, OrganizationState>(
                     builder: (context, state) {
-                      if (state is StationLoaded) {
-                        final stations = state.stations;
-                        final stationIds = stations.map((s) => s.id).toList();
+                      if (state is OrganizationLoaded) {
+                        final units = state.units;
+                        final unitIds = units.map((u) => u.id).toList();
 
-                        if (dropdownStationValue == null ||
-                            !stationIds.contains(dropdownStationValue)) {
+                        if (dropdownOrgValue == null ||
+                            !unitIds.contains(dropdownOrgValue)) {
                           WidgetsBinding.instance.addPostFrameCallback((_) {
                             setState(() {
-                              dropdownStationValue = stations.isNotEmpty
-                                  ? stations.first.id
+                              dropdownOrgValue = units.isNotEmpty
+                                  ? units.first.id
                                   : null;
                             });
                           });
@@ -239,22 +232,20 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> {
                         return DropdownButtonHideUnderline(
                           child: DropdownButton<String>(
                             isExpanded: true,
-                            value: dropdownStationValue,
-                            hint: Text('Chọn trạm'),
+                            value: dropdownOrgValue,
+                            hint: Text('Chọn đơn vị'),
                             onChanged: (String? newValue) {
                               setState(() {
-                                dropdownStationValue = newValue;
+                                dropdownOrgValue = newValue;
                               });
                             },
-                            items: stations.map<DropdownMenuItem<String>>((
-                              station,
-                            ) {
+                            items: units.map<DropdownMenuItem<String>>((unit) {
                               return DropdownMenuItem<String>(
-                                value: station.id,
+                                value: unit.id,
                                 child: Padding(
                                   padding: const EdgeInsets.all(8.0),
                                   child: Text(
-                                    station.stationName,
+                                    unit.name,
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
@@ -262,12 +253,12 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> {
                             }).toList(),
                           ),
                         );
-                      } else if (state is StationLoading) {
+                      } else if (state is OrganizationLoading) {
                         return Center(child: CircularProgressIndicator());
-                      } else if (state is StationError) {
+                      } else if (state is OrganizationError) {
                         return Center(child: Text('Error: ${state.message}'));
                       } else {
-                        return Center(child: Text('No stations available'));
+                        return Center(child: Text('Không có đơn vị'));
                       }
                     },
                   ),

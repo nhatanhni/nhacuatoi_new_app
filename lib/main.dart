@@ -10,6 +10,8 @@ import 'package:iot_app/bloc/device/device_bloc.dart';
 import 'package:iot_app/bloc/device/device_event.dart';
 import 'package:iot_app/bloc/station/station_bloc.dart';
 import 'package:iot_app/bloc/station/station_event.dart';
+import 'package:iot_app/bloc/organization/organization_bloc.dart';
+import 'package:iot_app/bloc/organization/organization_event.dart';
 import 'package:iot_app/bloc/mqtt/mqtt_bloc.dart';
 import 'package:iot_app/bloc/mqtt/mqtt_event.dart';
 import 'package:iot_app/repository/mqtt_manager.dart';
@@ -135,6 +137,10 @@ class MyApp extends StatelessWidget {
         BlocProvider<StationBloc>(
           create: (_) =>
               StationBloc(apiService: _apiService)..add(StationLoadAll()),
+        ),
+        BlocProvider<OrganizationBloc>(
+          create: (_) =>
+              OrganizationBloc(apiService: _apiService)..add(OrganizationLoadAll()),
         ),
         BlocProvider<MqttBloc>(
           create: (_) => MqttBloc(

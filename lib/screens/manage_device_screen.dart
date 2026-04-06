@@ -10,11 +10,11 @@ import 'package:iot_app/bloc/device/device_bloc.dart';
 import 'package:iot_app/bloc/device/device_event.dart';
 import 'package:iot_app/bloc/device/device_state.dart';
 import 'package:iot_app/core/state/selected_device_provider.dart';
-import '../utils/toast_helper.dart';
 import 'package:iot_app/models/device.dart';
 import 'package:iot_app/screens/device_detail_screen.dart';
-import 'package:iot_app/widgets/appbar_back_to_home_widget.dart';
 import 'package:iot_app/widgets/appbar_dropdown_widget.dart';
+
+import '../utils/toast_helper.dart';
 
 class ManageDeviceScreen extends StatefulWidget {
   const ManageDeviceScreen({Key? key}) : super(key: key);
@@ -288,7 +288,6 @@ class _ManageDeviceScreenState extends State<ManageDeviceScreen> {
             ),
           ],
         ),
-        leading: AppBarBackToHome(),
         actions: [AppBarDropdown()],
       ),
       body: SafeArea(

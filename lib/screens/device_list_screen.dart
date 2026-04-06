@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:iot_app/bloc/device/device_bloc.dart';
 import 'package:iot_app/bloc/device/device_event.dart';
@@ -245,59 +246,105 @@ class _DeviceListScreenState extends State<DeviceListScreen> {
     });
   }
 
-  Widget _buildFilterChips(List<String> filters, {required bool isLandscape}) {
-    final chips = filters.map((String value) {
-      final isSelected = _selectedFilter == value;
+  Widget _buildFilterChips(Map<String, int> filterCounts) {
+    final primaryColor = Theme.of(context).primaryColor;
+
+    final chips = filterCounts.entries.map((entry) {
+      final label = entry.key;
+      final count = entry.value;
+      final isSelected = _selectedFilter == label;
+
       return Padding(
-        padding: EdgeInsets.symmetric(
-          horizontal: isLandscape ? 0 : 6,
-          vertical: isLandscape ? 4 : 0,
-        ),
+        padding: const EdgeInsets.only(right: 8),
         child: InkWell(
-          borderRadius: BorderRadius.circular(32),
+          borderRadius: BorderRadius.circular(24),
           onTap: () {
+            HapticFeedback.selectionClick();
             setState(() {
-              _selectedFilter = value;
-              _applyFilter(value);
+              _selectedFilter = label;
+              _applyFilter(label);
             });
           },
           child: AnimatedContainer(
-            duration: const Duration(milliseconds: 160),
+            duration: const Duration(milliseconds: 180),
             curve: Curves.easeOut,
-            padding: EdgeInsets.symmetric(
-              horizontal: isLandscape ? 14 : 24,
-              vertical: isLandscape ? 10 : 16,
-            ),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
             decoration: BoxDecoration(
-              color: isSelected ? Theme.of(context).primaryColor : Colors.white,
-              borderRadius: BorderRadius.circular(32),
-              boxShadow: isSelected
-                  ? null
-                  : const [
-                      BoxShadow(
-                        color: Color(0x14000000),
-                        blurRadius: 18,
-                        offset: Offset(0, 8),
-                      ),
-                    ],
-            ),
-            child: Text(
-              value,
-              style: TextStyle(
-                fontSize: isLandscape ? 14 : 15,
-                height: isLandscape ? 1.25 : 22 / 15,
-                fontWeight: FontWeight.w500,
-                color: isSelected ? Colors.white : const Color(0xFF130F26),
+              color: isSelected ? primaryColor : Colors.white,
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(
+                color: isSelected ? primaryColor : const Color(0xFFDEE2E8),
+                width: 1.5,
               ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: isSelected
+                        ? Colors.white
+                        : const Color(0xFF4A4A6A),
+                  ),
+                ),
+                const SizedBox(width: 6),
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 180),
+                  curve: Curves.easeOut,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: isSelected
+                        ? Colors.white.withOpacity(0.28)
+                        : primaryColor.withOpacity(0.10),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    '$count',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: isSelected ? Colors.white : primaryColor,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ),
       );
     }).toList();
 
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(children: chips),
+    return Stack(
+      children: [
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.only(left: 16, right: 40),
+          child: Row(children: chips),
+        ),
+        Positioned(
+          right: 0,
+          top: 0,
+          bottom: 0,
+          width: 36,
+          child: IgnorePointer(
+            child: Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
+                  colors: [Color(0x00F7F9FC), Color(0xFFF7F9FC)],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -545,7 +592,11 @@ class _DeviceListScreenState extends State<DeviceListScreen> {
             .toSet()
             .toList()
           ..sort();
-    final filters = ['Tất cả', ...deviceTypes];
+    final filterCounts = <String, int>{
+      'Tất cả': _allDevices.length,
+      for (final type in deviceTypes)
+        type: _allDevices.where((d) => d.deviceType == type).length,
+    };
     final mediaQuery = MediaQuery.of(context);
     final isLandscape = mediaQuery.orientation == Orientation.landscape;
 
@@ -556,6 +607,7 @@ class _DeviceListScreenState extends State<DeviceListScreen> {
         elevation: 0,
         backgroundColor: Colors.white,
         foregroundColor: Colors.black87,
+        leading: Navigator.canPop(context) ? const BackButton() : null,
         actions: const [AppBarDropdown()],
         title: Column(
           children: [
@@ -574,13 +626,6 @@ class _DeviceListScreenState extends State<DeviceListScreen> {
           ],
         ),
         centerTitle: true,
-        leading: IconButton(
-          onPressed: () {
-            final scaffoldKey = widget.rootScaffoldKey ?? _scaffoldKey;
-            scaffoldKey.currentState?.openDrawer();
-          },
-          icon: const Icon(Icons.menu),
-        ),
       ),
       drawer: widget.rootScaffoldKey == null ? const AppDrawer() : null,
       body: SafeArea(
@@ -627,7 +672,7 @@ class _DeviceListScreenState extends State<DeviceListScreen> {
             children: [
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 10),
-                child: _buildFilterChips(filters, isLandscape: isLandscape),
+                child: _buildFilterChips(filterCounts),
               ),
               Expanded(child: _buildDeviceContent(isLandscape: isLandscape)),
             ],

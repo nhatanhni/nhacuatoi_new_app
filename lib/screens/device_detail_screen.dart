@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:io';
 import 'dart:convert';
 
 import 'package:flutter/cupertino.dart';
@@ -19,7 +18,6 @@ import 'package:iot_app/widgets/device_alarm_widget.dart';
 import 'package:iot_app/widgets/device_sensor_reading_widget.dart';
 import 'package:iot_app/widgets/device_detail_button_widget.dart';
 import 'package:iot_app/widgets/device_socket_metrics_tab.dart';
-import 'package:iot_app/widgets/placeholder_box_widget.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:syncfusion_flutter_gauges/gauges.dart';
 import 'package:iot_app/repository/api_service.dart';
@@ -157,7 +155,10 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen>
 
   Future<void>? _connectionFuture;
 
+  bool get _isDeviceDisabled => _deviceDetail?.isDisabled == true;
+
   bool get _canControlDevice {
+    if (_isDeviceDisabled) return false;
     final type = widget.device.deviceType.toLowerCase();
     return !(type.contains('sensor') ||
         type.contains('đồng hồ nước') ||
@@ -395,20 +396,63 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen>
     );
   }
 
+  Color get _connectionColor {
+    switch (widget.device.connectionStatus.toLowerCase()) {
+      case 'online':
+        return Colors.green;
+      case 'offline':
+        return Colors.red;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  String get _connectionLabel {
+    switch (widget.device.connectionStatus.toLowerCase()) {
+      case 'online':
+        return 'Trực tuyến';
+      case 'offline':
+        return 'Ngoại tuyến';
+      default:
+        return 'Không rõ';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: Column(
-          mainAxisAlignment: MainAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text(widget.device.deviceName),
-            Text(widget.device.deviceType, style: TextStyle(fontSize: 14)),
+            Text(
+              widget.device.deviceName,
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 2),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 7,
+                  height: 7,
+                  decoration: BoxDecoration(
+                    color: _connectionColor,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  '${widget.device.deviceType} · $_connectionLabel',
+                  style: TextStyle(fontSize: 12, color: Colors.white70),
+                ),
+              ],
+            ),
           ],
         ),
         centerTitle: true,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back),
+          icon: const Icon(Icons.arrow_back),
           onPressed: () {
             Navigator.pop(context, _isSwitched);
           },
@@ -419,56 +463,42 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen>
         listener: (context, state) {
           _onDeviceStateChanged(state);
         },
-        child: FutureBuilder(
-          future: _connectionFuture,
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator());
-            }
-            if (snapshot.hasError) {
-              return const Center(
-                child: Text('Có lỗi xảy ra khi kết nối đến máy chủ'),
-              );
-            }
-
-            return Column(
-              children: [
-                Container(
-                  margin: const EdgeInsets.fromLTRB(16, 10, 16, 6),
-                  decoration: BoxDecoration(
-                    color: Colors.grey[200],
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: TabBar(
-                    controller: _tabController,
-                    dividerColor: Colors.transparent,
-                    indicatorSize: TabBarIndicatorSize.tab,
-                    indicator: BoxDecoration(
-                      borderRadius: BorderRadius.circular(10),
-                      color: Theme.of(context).primaryColor,
-                    ),
-                    labelColor: Colors.white,
-                    unselectedLabelColor: Colors.black87,
-                    tabs: const [
-                      Tab(text: 'Thông tin'),
-                      Tab(text: 'Điều khiển'),
-                      Tab(text: 'Thông số'),
-                    ],
-                  ),
+        child: Column(
+          children: [
+            Container(
+              margin: const EdgeInsets.fromLTRB(16, 10, 16, 6),
+              decoration: BoxDecoration(
+                color: Colors.grey[200],
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: TabBar(
+                controller: _tabController,
+                dividerColor: Colors.transparent,
+                indicatorSize: TabBarIndicatorSize.tab,
+                indicator: BoxDecoration(
+                  borderRadius: BorderRadius.circular(10),
+                  color: Theme.of(context).primaryColor,
                 ),
-                Expanded(
-                  child: TabBarView(
-                    controller: _tabController,
-                    children: [
-                      _buildInfoTab(),
-                      _buildControlTab(),
-                      _buildSocketMetricsTab(),
-                    ],
-                  ),
-                ),
-              ],
-            );
-          },
+                labelColor: Colors.white,
+                unselectedLabelColor: Colors.black87,
+                tabs: const [
+                  Tab(icon: Icon(Icons.info_outline, size: 18), text: 'Thông tin'),
+                  Tab(icon: Icon(Icons.tune, size: 18), text: 'Điều khiển'),
+                  Tab(icon: Icon(Icons.bar_chart, size: 18), text: 'Thông số'),
+                ],
+              ),
+            ),
+            Expanded(
+              child: TabBarView(
+                controller: _tabController,
+                children: [
+                  _buildInfoTab(),
+                  _buildControlTab(),
+                  _buildSocketMetricsTab(),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -598,23 +628,36 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen>
 
   Widget _buildDetailSummary() {
     if (_isLoadingDetail) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: const [
-          Text(
-            'Đang tải thông tin chi tiết...',
-            style: TextStyle(fontWeight: FontWeight.w600),
-          ),
-          SizedBox(height: 8),
-          LinearProgressIndicator(minHeight: 6),
-        ],
+      return Shimmer.fromColors(
+        baseColor: Colors.grey[300]!,
+        highlightColor: Colors.grey[100]!,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(height: 18, width: 180, decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(4))),
+            const SizedBox(height: 10),
+            Container(height: 12, width: double.infinity, decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(4))),
+            const SizedBox(height: 6),
+            Container(height: 12, width: 240, decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(4))),
+            const SizedBox(height: 6),
+            Container(height: 12, width: 200, decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(4))),
+          ],
+        ),
       );
     }
 
     if (_detailError != null) {
-      return Text(
-        _detailError!,
-        style: const TextStyle(color: Colors.redAccent),
+      return Row(
+        children: [
+          const Icon(Icons.error_outline, color: Colors.redAccent, size: 18),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              _detailError!,
+              style: const TextStyle(color: Colors.redAccent),
+            ),
+          ),
+        ],
       );
     }
 
@@ -623,34 +666,102 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen>
       return const Text('Không có thông tin chi tiết thiết bị.');
     }
 
-    final statusText = detail.isDisabled
+    final bool isDisabled = detail.isDisabled;
+    // _isSwitched là nguồn sự thật: cập nhật từ manual toggle + MQTT status message
+    // detail.startup chỉ là giá trị khởi tạo ban đầu từ API
+    final bool isRunning = !isDisabled && _isSwitched;
+    final Color statusColor = isDisabled
+        ? Colors.grey
+        : (isRunning ? Colors.green : Colors.orange);
+    final String statusText = isDisabled
         ? 'Ngừng hoạt động'
-        : (detail.startup ? 'Đang chạy' : 'Đang tắt');
+        : (isRunning ? 'Đang chạy' : 'Đang tắt');
+    final IconData statusIcon = isDisabled
+        ? Icons.cancel_outlined
+        : (isRunning ? Icons.check_circle_outline : Icons.pause_circle_outline);
+
     final heartbeatText = detail.lastHeartbeat == null
         ? 'Chưa có dữ liệu'
-        : DateFormat('HH:mm:ss dd/MM/yyyy').format(
+        : DateFormat('HH:mm · dd/MM/yyyy').format(
             detail.lastHeartbeat!.add(const Duration(hours: 7)),
           );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          detail.name.isEmpty ? widget.device.deviceName : detail.name,
-          style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                detail.name.isEmpty ? widget.device.deviceName : detail.name,
+                style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: statusColor.withOpacity(0.12),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: statusColor.withOpacity(0.4)),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(statusIcon, size: 13, color: statusColor),
+                  const SizedBox(width: 4),
+                  Text(
+                    statusText,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: statusColor,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
-        const SizedBox(height: 10),
-        Text('Loại: ${detail.deviceTypeName}'),
-        Text('Serial: ${detail.serial}'),
-        Text('Trạm: ${detail.stationName}'),
-        Text('Khu vực: ${detail.adminLevelName}'),
-        Text('Địa chỉ: ${detail.address}'),
-        Text('Model: ${detail.model}'),
-        Text('Hãng: ${detail.manufacturer.isEmpty ? '-' : detail.manufacturer}'),
-        Text('Vị trí: ${detail.positionName}'),
-        Text('Trạng thái: $statusText'),
-        Text('Heartbeat gần nhất: $heartbeatText'),
+        const SizedBox(height: 12),
+        _infoRow(Icons.category_outlined, 'Loại', detail.deviceTypeName),
+        _infoRow(Icons.qr_code, 'Serial', detail.serial),
+        _infoRow(Icons.cell_tower, 'Trạm', detail.stationName),
+        _infoRow(Icons.map_outlined, 'Khu vực', detail.adminLevelName),
+        _infoRow(Icons.location_on_outlined, 'Địa chỉ', detail.address),
+        if (detail.model.isNotEmpty) _infoRow(Icons.devices_outlined, 'Model', detail.model),
+        if (detail.manufacturer.isNotEmpty) _infoRow(Icons.business_outlined, 'Hãng', detail.manufacturer),
+        _infoRow(Icons.place_outlined, 'Vị trí', detail.positionName),
+        _infoRow(Icons.favorite_border, 'Heartbeat', heartbeatText),
       ],
+    );
+  }
+
+  Widget _infoRow(IconData icon, String label, String value) {
+    if (value.isEmpty || value == '-') return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 15, color: Colors.grey[600]),
+          const SizedBox(width: 6),
+          SizedBox(
+            width: 72,
+            child: Text(
+              label,
+              style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -833,149 +944,138 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen>
 
   Widget _buildDefaultInfoContent() {
     return ListView(
+      padding: const EdgeInsets.only(bottom: 24),
       children: [
         AlarmWidget(
           deviceSerial: widget.device.deviceSerial,
           mqttManager: mqttManager,
         ),
-        const SizedBox(height: 20),
-        Container(
-          padding: const EdgeInsets.all(5),
-          margin: const EdgeInsets.symmetric(horizontal: 16),
-          decoration: BoxDecoration(
-            color: Colors.grey[200],
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: FutureBuilder(
-            future: _connectionFuture,
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return Shimmer.fromColors(
-                  baseColor: Colors.grey[300]!,
-                  highlightColor: Colors.grey[100]!,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      PlaceholderBox(),
-                      Container(
-                        height: 100,
-                        width: 1,
-                        color: Colors.grey,
-                      ),
-                      PlaceholderBox(),
-                    ],
-                  ),
-                );
-              }
-              if (snapshot.hasError) {
-                return const Center(
-                  child: Text('Đã có lỗi khi kết nối.'),
-                );
-              }
-              return Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  Expanded(
-                    child: DeviceSensorReadingBox(
-                      deviceSerial: widget.device.deviceSerial,
-                      icon: Icons.opacity,
-                      title: 'Độ ẩm đất',
-                      sensorType: 'doam',
-                      color: Colors.brown[400]!,
-                      mqttManager: mqttManager,
-                    ),
-                  ),
-                  Container(
-                    height: 100,
-                    width: 1,
-                    color: Colors.grey,
-                  ),
-                  Expanded(
-                    child: DeviceSensorReadingBox(
-                      deviceSerial: widget.device.deviceSerial,
-                      icon: Icons.water,
-                      title: 'Mức nước',
-                      sensorType: 'chatlong',
-                      color: Colors.blueAccent,
-                      mqttManager: mqttManager,
-                    ),
-                  ),
-                ],
-              );
-            },
+        const SizedBox(height: 16),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Text(
+            'Cảm biến thời gian thực',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: Colors.grey[700],
+            ),
           ),
         ),
-        const SizedBox(height: 20),
-      ],
-    );
-  }
-
-  Widget _buildControlTab() {
-    return ListView(
-      children: [
-        if (!_canControlDevice)
-          Container(
-            margin: const EdgeInsets.fromLTRB(16, 14, 16, 0),
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.orange[50],
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.orange[200]!),
-            ),
-            child: const Text(
-              'Thiết bị này chỉ hỗ trợ giám sát, các thao tác điều khiển sẽ bị vô hiệu hóa.',
-            ),
+        const SizedBox(height: 8),
+        Container(
+          padding: const EdgeInsets.all(8),
+          margin: const EdgeInsets.symmetric(horizontal: 16),
+          decoration: BoxDecoration(
+            color: Colors.grey[100],
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.grey[300]!),
           ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10),
-          child: const Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          child: Row(
             children: [
-              Text(
-                'Điều khiển',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
+              Expanded(
+                child: DeviceSensorReadingBox(
+                  deviceSerial: widget.device.deviceSerial,
+                  icon: Icons.opacity,
+                  title: 'Độ ẩm đất',
+                  sensorType: 'doam',
+                  color: Colors.brown[400]!,
+                  mqttManager: mqttManager,
+                ),
+              ),
+              Container(height: 80, width: 1, color: Colors.grey[300]),
+              Expanded(
+                child: DeviceSensorReadingBox(
+                  deviceSerial: widget.device.deviceSerial,
+                  icon: Icons.water,
+                  title: 'Mức nước',
+                  sensorType: 'chatlong',
+                  color: Colors.blueAccent,
+                  mqttManager: mqttManager,
+                ),
               ),
             ],
           ),
         ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 5),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              AbsorbPointer(
-                absorbing: !_canControlDevice,
-                child: DeviceDetailButton(
-                  color: !_canControlDevice
-                      ? Colors.grey
-                      : (_isSwitched
-                            ? Theme.of(context).primaryColor
-                            : Colors.grey),
-                  icon: Icons.power_settings_new,
-                  shouldDisplayDotIndicator: true,
-                  dotIndicatorColor: _isSwitched ? Colors.green : Colors.grey[200],
-                  title: 'Bật/Tắt',
-                  onTap: () async {
-                    bool newSwitchState = !_isSwitched;
-                    await _saveSwitchDeviceHistory(newSwitchState ? 1 : 0);
+        const SizedBox(height: 16),
+      ],
+    );
+  }
 
-                    String topic = 'NhaCuaToi_${widget.device.deviceSerial}';
-                    String message = newSwitchState ? 'ON' : 'OFF';
-                    mqttManager.publish(topic, message);
+  bool _isSwitchLoading = false;
 
-                    await _loadSwitchEvents();
+  Future<void> _handleToggleSwitch() async {
+    if (_isSwitchLoading) return;
+    setState(() => _isSwitchLoading = true);
+    try {
+      final newSwitchState = !_isSwitched;
+      await _saveSwitchDeviceHistory(newSwitchState ? 1 : 0);
+      final topic = 'NhaCuaToi_${widget.device.deviceSerial}';
+      final message = newSwitchState ? 'ON' : 'OFF';
+      mqttManager.publish(topic, message);
+      await _loadSwitchEvents();
+      if (mounted) setState(() => _isSwitched = newSwitchState);
+    } finally {
+      if (mounted) setState(() => _isSwitchLoading = false);
+    }
+  }
 
-                    setState(() {
-                      _isSwitched = newSwitchState;
-                    });
-                  },
-                ),
+  Widget _buildControlTab() {
+    return ListView(
+      padding: const EdgeInsets.only(bottom: 24),
+      children: [
+        if (!_canControlDevice)
+          Container(
+            margin: const EdgeInsets.fromLTRB(16, 14, 16, 0),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(
+              color: _isDeviceDisabled ? Colors.red[50] : Colors.orange[50],
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: _isDeviceDisabled ? Colors.red[300]! : Colors.orange[300]!,
               ),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  _isDeviceDisabled ? Icons.block : Icons.info_outline,
+                  color: _isDeviceDisabled ? Colors.red[700] : Colors.orange[700],
+                  size: 20,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    _isDeviceDisabled
+                        ? 'Thiết bị đã ngừng hoạt động. Không thể điều khiển.'
+                        : 'Thiết bị này chỉ hỗ trợ giám sát. Các thao tác điều khiển bị vô hiệu hóa.',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: _isDeviceDisabled ? Colors.red[800] : null,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        const Padding(
+          padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
+          child: Text(
+            'Điều khiển',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+          child: Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            children: [
+              _buildPowerButton(),
               AbsorbPointer(
                 absorbing: !_canControlDevice,
                 child: DeviceDetailButton(
                   color: !_canControlDevice
-                      ? Colors.grey
+                      ? Colors.grey[400]!
                       : Theme.of(context).primaryColorDark,
                   icon: Icons.timer,
                   title: 'Hẹn giờ',
@@ -986,36 +1086,6 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen>
                     mqttManager.ensureConnected();
                   },
                 ),
-              ),
-              DeviceDetailButton(
-                color: Theme.of(context).primaryColorDark,
-                icon: Icons.info,
-                title: 'Thông tin',
-                onTap: () {
-                  showDialog(
-                    context: context,
-                    builder: (context) => AlertDialog.adaptive(
-                      title: const Text('Thông tin thiết bị'),
-                      content: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('Tên thiết bị: ${widget.device.deviceName}'),
-                          Text('Loại thiết bị: ${widget.device.deviceType}'),
-                          Text('Serial thiết bị: ${widget.device.deviceSerial}'),
-                        ],
-                      ),
-                      actions: [
-                        TextButton(
-                          onPressed: () {
-                            Navigator.of(context).pop();
-                          },
-                          child: const Text('OK'),
-                        ),
-                      ],
-                    ),
-                  );
-                },
               ),
               if (widget.device.deviceType == 'Trạm bơm')
                 DeviceDetailButton(
@@ -1030,108 +1100,151 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen>
             ],
           ),
         ),
-        const SizedBox(height: 20),
+        const SizedBox(height: 24),
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 16.0),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text(
-                'Lịch sử',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
+                'Lịch sử bật/tắt',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
               ),
-              Row(
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.refresh),
-                    onPressed: () {
-                      _loadSwitchEvents();
-                    },
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.delete_forever),
-                    onPressed: () {
-                      if (Platform.isAndroid) {
-                        showDialog(
-                          context: context,
-                          builder: (context) => AlertDialog(
-                            title: const Text('Xoá lịch sử'),
-                            content: const Text(
-                              'Bạn có chắc chắn muốn xoá lịch sử của thiết bị này không?',
-                            ),
-                            actions: [
-                              TextButton(
-                                onPressed: () {
-                                  Navigator.of(context).pop();
-                                },
-                                child: const Text('Huỷ'),
-                              ),
-                              TextButton(
-                                onPressed: () {
-                                  _clearSwitchEvents();
-                                  Navigator.of(context).pop();
-                                },
-                                child: const Text('Xoá'),
-                              ),
-                            ],
-                          ),
-                        );
-                      } else if (Platform.isIOS) {
-                        showCupertinoDialog(
-                          context: context,
-                          builder: (context) => CupertinoAlertDialog(
-                            title: const Text('Xoá lịch sử'),
-                            content: const Text(
-                              'Bạn có chắc chắn muốn xoá lịch sử của thiết bị này không?',
-                            ),
-                            actions: [
-                              CupertinoDialogAction(
-                                onPressed: () {
-                                  Navigator.of(context).pop();
-                                },
-                                child: const Text('Huỷ'),
-                              ),
-                              CupertinoDialogAction(
-                                onPressed: () {
-                                  _clearSwitchEvents();
-                                  Navigator.of(context).pop();
-                                },
-                                child: const Text('Xoá'),
-                              ),
-                            ],
-                          ),
-                        );
-                      }
-                    },
-                  ),
-                ],
+              IconButton(
+                icon: const Icon(Icons.refresh_rounded),
+                tooltip: 'Làm mới',
+                onPressed: _loadSwitchEvents,
               ),
             ],
           ),
         ),
-        Column(
-          children: _switchEvents.isEmpty
-              ? const [Text('Chưa có lịch sử bật/tắt thiết bị')]
-              : _switchEvents.reversed.map((event) {
-                  final dateFormat = DateFormat('HH:mm:ss, dd/MM/yyyy');
-                  final dateString = dateFormat.format(
-                    event.timestamp.add(const Duration(hours: 7)),
-                  );
-                  return ListTile(
-                    leading: Icon(
-                      Icons.power_settings_new,
-                      color: event.isSwitched ? Colors.green : Colors.red,
-                    ),
-                    title: Text(
-                      '${event.isSwitched ? 'Bật' : 'Tắt'} vào lúc $dateString',
-                      style: const TextStyle(
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  );
-                }).toList(),
-        ),
+        _buildSwitchHistory(),
       ],
+    );
+  }
+
+  Widget _buildPowerButton() {
+    final canControl = _canControlDevice;
+    final color = !canControl
+        ? Colors.grey[400]!
+        : (_isSwitched ? Theme.of(context).primaryColor : Colors.grey[500]!);
+
+    return AbsorbPointer(
+      absorbing: !canControl || _isSwitchLoading,
+      child: GestureDetector(
+        onTap: _handleToggleSwitch,
+        child: Container(
+          height: MediaQuery.of(context).size.height * 0.1,
+          width: MediaQuery.of(context).size.width * 0.25,
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Stack(
+            children: [
+              Center(
+                child: _isSwitchLoading
+                    ? const SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2.5,
+                        ),
+                      )
+                    : Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.power_settings_new, color: Colors.white, size: 25),
+                          const SizedBox(height: 4),
+                          Text(
+                            _isSwitched ? 'Đang bật' : 'Đang tắt',
+                            style: const TextStyle(color: Colors.white, fontSize: 12),
+                          ),
+                        ],
+                      ),
+              ),
+              Positioned(
+                top: 6,
+                right: 6,
+                child: Container(
+                  width: 10,
+                  height: 10,
+                  decoration: BoxDecoration(
+                    color: _isSwitched ? Colors.greenAccent : Colors.grey[300],
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white, width: 1.5),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSwitchHistory() {
+    if (_switchEvents.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 32),
+        child: Column(
+          children: [
+            Icon(Icons.history_toggle_off, size: 48, color: Colors.grey[350]),
+            const SizedBox(height: 12),
+            Text(
+              'Chưa có lịch sử bật/tắt',
+              style: TextStyle(color: Colors.grey[500], fontSize: 14),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final dateFormat = DateFormat('HH:mm:ss · dd/MM/yyyy');
+    final events = _switchEvents.reversed.toList();
+
+    return Column(
+      children: events.map((event) {
+        final dateString = dateFormat.format(
+          event.timestamp.add(const Duration(hours: 7)),
+        );
+        final isOn = event.isSwitched;
+        return Container(
+          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          decoration: BoxDecoration(
+            color: isOn ? Colors.green[50] : Colors.red[50],
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: isOn ? Colors.green[200]! : Colors.red[200]!,
+            ),
+          ),
+          child: ListTile(
+            dense: true,
+            leading: CircleAvatar(
+              radius: 16,
+              backgroundColor: isOn ? Colors.green[100] : Colors.red[100],
+              child: Icon(
+                Icons.power_settings_new,
+                size: 16,
+                color: isOn ? Colors.green[700] : Colors.red[700],
+              ),
+            ),
+            title: Text(
+              isOn ? 'Đã bật thiết bị' : 'Đã tắt thiết bị',
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                fontSize: 13,
+                color: isOn ? Colors.green[800] : Colors.red[800],
+              ),
+            ),
+            subtitle: Text(
+              dateString,
+              style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+            ),
+          ),
+        );
+      }).toList(),
     );
   }
 
@@ -1140,36 +1253,120 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen>
       return const Center(child: CircularProgressIndicator());
     }
     if (_waterError != null) {
-      return Center(child: Text('Lỗi: \\$_waterError'));
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.error_outline, size: 48, color: Colors.red[300]),
+              const SizedBox(height: 12),
+              Text(
+                'Không thể tải dữ liệu đồng hồ nước',
+                style: TextStyle(fontWeight: FontWeight.w600, color: Colors.red[700]),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                _waterError!,
+                style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              OutlinedButton.icon(
+                onPressed: _fetchWaterMeterData,
+                icon: const Icon(Icons.refresh),
+                label: const Text('Thử lại'),
+              ),
+            ],
+          ),
+        ),
+      );
     }
     if (_waterMeterData == null || _waterMeterData!['Data'] == null) {
-      return const Center(child: Text('Không có dữ liệu đồng hồ nước.'));
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.water_drop_outlined, size: 48, color: Colors.blue[200]),
+            const SizedBox(height: 12),
+            const Text('Không có dữ liệu đồng hồ nước.'),
+          ],
+        ),
+      );
     }
     final List data = List.from(_waterMeterData!['Data']);
     if (data.isEmpty) {
-      return const Center(child: Text('Không có dữ liệu đồng hồ nước.'));
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.water_drop_outlined, size: 48, color: Colors.blue[200]),
+            const SizedBox(height: 12),
+            const Text('Không có dữ liệu đồng hồ nước.'),
+          ],
+        ),
+      );
     }
-    // Sắp xếp theo thời gian mới nhất lên đầu
     data.sort((a, b) {
       final at = DateTime.tryParse(a['Timestamp'] ?? '') ?? DateTime(1970);
       final bt = DateTime.tryParse(b['Timestamp'] ?? '') ?? DateTime(1970);
       return bt.compareTo(at);
     });
     return ListView.builder(
+      padding: const EdgeInsets.symmetric(vertical: 8),
       itemCount: data.length,
       itemBuilder: (context, index) {
         final item = data[index];
+        final liters = item['MeterReadingLiters'];
+        final timestamp = item['Timestamp'] ?? '-';
+        final valveStatus = item['ValveStatus'] ?? '-';
+        final valveFault = item['ValveFaultStatus'] ?? '-';
         return Card(
-          margin: const EdgeInsets.all(12),
-          child: ListTile(
-            leading: const Icon(Icons.water, color: Colors.blue),
-            title: Text('Chỉ số: \\${item['MeterReadingLiters']} lít'),
-            subtitle: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Row(
               children: [
-                Text('Thời gian: \\${item['Timestamp']}'),
-                Text('Trạng thái van: \\${item['ValveStatus']}'),
-                Text('Tình trạng van: \\${item['ValveFaultStatus']}'),
+                CircleAvatar(
+                  radius: 24,
+                  backgroundColor: Colors.blue[50],
+                  child: Icon(Icons.water_drop, color: Colors.blue[600], size: 28),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '$liters lít',
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        timestamp,
+                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                      ),
+                    ],
+                  ),
+                ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    _valveStatusChip(valveStatus),
+                    if (valveFault != '-' && valveFault != 'Normal')
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Text(
+                          valveFault,
+                          style: TextStyle(fontSize: 11, color: Colors.red[400]),
+                        ),
+                      ),
+                  ],
+                ),
               ],
             ),
           ),
@@ -1178,34 +1375,64 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen>
     );
   }
 
+  Widget _valveStatusChip(String status) {
+    final isOpen = status.toLowerCase() == 'open' || status == 'Mở';
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: isOpen ? Colors.green[50] : Colors.orange[50],
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: isOpen ? Colors.green[300]! : Colors.orange[300]!),
+      ),
+      child: Text(
+        status,
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+          color: isOpen ? Colors.green[700] : Colors.orange[700],
+        ),
+      ),
+    );
+  }
+
   Widget _buildWaterLevelSensorInfo() {
     return Padding(
       padding: const EdgeInsets.all(16.0),
       child: Column(
         children: [
-          // Header
           Card(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              child: Row(
                 children: [
-                  Icon(Icons.water_drop, size: 48, color: Colors.blue[600]),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Cảm biến mực nước',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  CircleAvatar(
+                    radius: 24,
+                    backgroundColor: Colors.blue[50],
+                    child: Icon(Icons.water_drop, size: 28, color: Colors.blue[600]),
                   ),
-                  Text(
-                    'Serial: ${widget.device.deviceSerial}',
-                    style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Cảm biến mực nước',
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'Serial: ${widget.device.deviceSerial}',
+                          style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
             ),
           ),
           const SizedBox(height: 16),
-
-          // Water Level Reading Widget
           Expanded(
             child: DeviceSensorReadingBox(
               deviceSerial: widget.device.deviceSerial,
@@ -1216,45 +1443,9 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen>
               mqttManager: mqttManager,
             ),
           ),
-
-          const SizedBox(height: 16),
-
-          // Instructions
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Hướng dẫn test:',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Topic: NhaCuaToi_${widget.device.deviceSerial}_mucnuoc',
-                  ),
-                  const SizedBox(height: 4),
-                  Text('Message JSON:'),
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    margin: const EdgeInsets.symmetric(vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.grey[100],
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: Text(
-                      '{"water_level": 45.5, "unit": "cm", "status": "normal"}',
-                      style: TextStyle(fontFamily: 'monospace', fontSize: 12),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
         ],
       ),
     );
   }
-
 }
+

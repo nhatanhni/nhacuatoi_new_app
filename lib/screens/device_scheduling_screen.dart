@@ -1,678 +1,657 @@
-// ignore_for_file: avoid_print, use_build_context_synchronously
-
-import 'dart:io';
-
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
-// import 'package:fluttertoast/fluttertoast.dart';
-import '../utils/toast_helper.dart';
+import 'package:iot_app/bloc/scheduler/scheduler_bloc.dart';
+import 'package:iot_app/bloc/scheduler/scheduler_event.dart';
+import 'package:iot_app/bloc/scheduler/scheduler_state.dart';
 import 'package:iot_app/models/device.dart';
 import 'package:iot_app/repository/scheduler_repository.dart';
 import 'package:iot_app/widgets/schedule_tag_widget.dart';
 import 'package:numberpicker/numberpicker.dart';
 
-class DeviceSchedulingScreen extends StatefulWidget {
+class DeviceSchedulingScreen extends StatelessWidget {
   static const routeName = '/device_schedule';
 
   final Device device;
 
-  DeviceSchedulingScreen({required this.device});
+  const DeviceSchedulingScreen({super.key, required this.device});
 
   @override
-  State<DeviceSchedulingScreen> createState() => _DeviceSchedulingScreenState();
+  Widget build(BuildContext context) {
+    return BlocProvider(
+      create: (_) => SchedulerBloc(
+        schedulerRepository: SchedulerRepository(),
+      )..add(SchedulerLoadRequested(device.deviceSerial)),
+      child: _DeviceSchedulingView(device: device),
+    );
+  }
 }
 
-class _DeviceSchedulingScreenState extends State<DeviceSchedulingScreen> {
-  List<Map<String, dynamic>> _schedules = [];
-  bool _isLoading = true; // Add this line
-  bool _switchValue = false;
+class _DeviceSchedulingView extends StatelessWidget {
+  final Device device;
 
-  // for time picker and PUT request
-  int _selectedDuration = 0;
-  int _selectedHour = 0;
-  int _selectedMinute = 0;
-  int _repeat = 0;
+  const _DeviceSchedulingView({required this.device});
 
-  // method to get schedule given id
-  Future<void> _getSchedule(String serial) async {
-    final List<Map<String, dynamic>> schedules =
-        await SchedulerRepository().getScheduleBySerial(serial);
-    setState(() {
-      _schedules = schedules;
-      _isLoading = false; // Add this line
-    });
-  }
-
-  // method to post schedule. After posting, get the schedule again, and reset the time picker, duration, and repeat values
-  Future<void> _postSchedule(
-      int hour, int minute, int duration, int repeat) async {
-    final schedule = {
-      "serial": widget.device.deviceSerial,
-      "nameDevice": widget.device.deviceName,
-      "Date_Type": "1",
-      "repeat": repeat,
-      "time":
-          "${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')}",
-      "numberTime": duration,
-      "status": 1,
-      "topic": "NhaCuaToi_${widget.device.deviceSerial}",
-      "meseger": "1",
-      "updateTime": DateTime.now().toIso8601String()
-    };
-    await SchedulerRepository().createSchedule(schedule);
-
-    await _getSchedule(widget.device.deviceSerial);
-    _selectedHour = 0;
-    _selectedMinute = 0;
-    _selectedDuration = 0;
-    _repeat = 0;
-  }
-
-  // method to put schedule. After putting, get the schedule again
-  Future<void> _putSchedule(String id, Map<String, dynamic> schedule) async {
-    await SchedulerRepository().updateSchedule(id, schedule);
-    await _getSchedule(widget.device.deviceSerial);
-  }
-
-  // method to delete schedule. After deleting, get the schedule again
-  Future<void> _deleteSchedule(String id) async {
-    await SchedulerRepository().deleteSchedule(id);
-    // await SchedulerRepository().deleteScheduleWithGet(id);
-    await _getSchedule(widget.device.deviceSerial);
-  }
-
-  // method to show dialog for time picker
-  void _showScheduleDialog() {
-    final TextEditingController durationController = TextEditingController();
-    int selectedHour = 0;
-    int selectedMinute = 0;
-    int selectedDuration = 0;
-    int repeat = 0;
-    showDialog(
+  void _showScheduleSheet(BuildContext context) {
+    showModalBottomSheet(
       context: context,
-      barrierDismissible: false,
-      builder: (BuildContext context) {
-        return Material(
-          type: MaterialType.transparency,
-          child: AlertDialog.adaptive(
-            title: const Text('Thêm lịch hẹn giờ'),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                const Padding(
-                  padding: EdgeInsets.only(bottom: 8.0),
-                  child: Text("Chọn giờ"),
+      isScrollControlled: true,
+      useSafeArea: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => _ScheduleFormSheet(
+        title: 'Thêm lịch hẹn giờ',
+        onSubmit: (hour, minute, duration, repeat) {
+          context.read<SchedulerBloc>().add(
+                SchedulerCreateRequested(
+                  serial: device.deviceSerial,
+                  deviceName: device.deviceName,
+                  hour: hour,
+                  minute: minute,
+                  duration: duration,
+                  repeat: repeat,
                 ),
-                // Choose time
-                Container(
-                  margin: const EdgeInsets.only(bottom: 10),
-                  decoration: BoxDecoration(
-                      border: Border.all(),
-                      borderRadius: BorderRadius.circular(10)),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: <Widget>[
-                      StatefulBuilder(builder: (context, setState) {
-                        return NumberPicker(
-                          itemHeight: 35,
-                          textStyle: const TextStyle(fontSize: 14),
-                          selectedTextStyle: const TextStyle(
-                              fontSize: 16, fontWeight: FontWeight.bold),
-                          zeroPad: true,
-                          haptics: true,
-                          value: selectedHour,
-                          infiniteLoop: true,
-                          minValue: 0,
-                          maxValue: 23,
-                          onChanged: (newValue) {
-                            setState(() {
-                              selectedHour = newValue;
-                            });
-                          },
-                        );
-                      }),
-                      const Text(':', style: TextStyle(fontSize: 20)),
-                      StatefulBuilder(builder: (context, setState) {
-                        return NumberPicker(
-                          itemHeight: 35,
-                          textStyle: const TextStyle(fontSize: 14),
-                          selectedTextStyle: const TextStyle(
-                              fontSize: 16, fontWeight: FontWeight.bold),
-                          infiniteLoop: true,
-                          zeroPad: true,
-                          haptics: true,
-                          value: selectedMinute,
-                          minValue: 0,
-                          maxValue: 59,
-                          onChanged: (newValue) {
-                            setState(() {
-                              selectedMinute = newValue;
-                            });
-                          },
-                        );
-                      }),
-                    ],
-                  ),
-                ),
-
-                // Choose duration in seconds by user input, number keyboard
-
-                TextField(
-                  controller: durationController,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(
-                      border: OutlineInputBorder(),
-                      labelText: "Thời lượng (giây)"),
-                  onChanged: (value) {
-                    setState(() {
-                      selectedDuration = int.tryParse(value) ?? 0;
-                      if (_selectedDuration > 86400) {
-                        durationController.text = '86400'; // Cap value at 86400
-                        selectedDuration = 86400;
-                      }
-                    });
-                  },
-                ),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Expanded(
-                      child: Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 8.0),
-                        child: Text(
-                          "Lặp lại hằng ngày",
-                          textAlign: TextAlign.end,
-                        ),
-                      ),
-                    ),
-                    StatefulBuilder(builder: (context, setState) {
-                      return Switch(
-                        value: repeat == 1,
-                        onChanged: (value) {
-                          setState(() {
-                            repeat = value ? 1 : 0;
-                          });
-                        },
-                      );
-                    }),
-                  ],
-                ),
-              ],
-            ),
-            actions: <Widget>[
-              TextButton(
-                child: const Text('Huỷ'),
-                onPressed: () {
-                  Navigator.of(context).pop();
-                },
-              ),
-              TextButton(
-                child: const Text('OK'),
-                onPressed: () async {
-                  // Close the dialog
-                  // Post the schedule
-                  print("Repeat: $repeat");
-                  await _postSchedule(
-                      selectedHour, selectedMinute, selectedDuration, repeat);
-                  Fluttertoast.showToast(
-                      msg: "Thêm hẹn giờ thành công!",
-                      toastLength: Toast.LENGTH_SHORT,
-                      gravity: ToastGravity.BOTTOM,
-                      timeInSecForIosWeb: 1,
-                      backgroundColor: Theme.of(context).primaryColor,
-                      textColor: Colors.white,
-                      fontSize: 16.0);
-                  Navigator.of(context).pop();
-                },
-              ),
-            ],
-          ),
-        );
-      },
+              );
+        },
+      ),
     );
   }
 
-  void _showAlterScheduleDialog(
-      String id, int hour, int minute, int duration, int repeat) {
-    int thisHour = hour;
-    int thisMinute = minute;
-    int thisDuration = duration;
-    int thisRepeat = repeat;
-    final putDurationController =
-        TextEditingController(text: thisDuration.toString());
-
-    showDialog(
+  void _showEditSheet(
+    BuildContext context,
+    String id,
+    int hour,
+    int minute,
+    int duration,
+    int repeat,
+  ) {
+    showModalBottomSheet(
       context: context,
-      barrierDismissible: false,
-      builder: (BuildContext context) {
-        return Material(
-          type: MaterialType.transparency,
-          child: AlertDialog.adaptive(
-            title: const Text('Sửa lịch hẹn giờ'),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                const Padding(
-                  padding: EdgeInsets.only(bottom: 8.0),
-                  child: Text("Chọn giờ"),
-                ),
-                // Choose time
-                Container(
-                  margin: const EdgeInsets.only(bottom: 10),
-                  decoration: BoxDecoration(
-                      border: Border.all(),
-                      borderRadius: BorderRadius.circular(10)),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: <Widget>[
-                      StatefulBuilder(builder: (context, setState) {
-                        return NumberPicker(
-                          itemHeight: 35,
-                          textStyle: const TextStyle(fontSize: 14),
-                          selectedTextStyle: const TextStyle(
-                              fontSize: 16, fontWeight: FontWeight.bold),
-                          zeroPad: true,
-                          haptics: true,
-                          value: thisHour,
-                          infiniteLoop: true,
-                          minValue: 0,
-                          maxValue: 23,
-                          onChanged: (newValue) {
-                            setState(() {
-                              thisHour = newValue;
-                            });
-                          },
-                        );
-                      }),
-                      const Text(':', style: TextStyle(fontSize: 20)),
-                      StatefulBuilder(builder: (context, setState) {
-                        return NumberPicker(
-                          itemHeight: 35,
-                          textStyle: const TextStyle(fontSize: 14),
-                          selectedTextStyle: const TextStyle(
-                              fontSize: 16, fontWeight: FontWeight.bold),
-                          infiniteLoop: true,
-                          zeroPad: true,
-                          haptics: true,
-                          value: thisMinute,
-                          minValue: 0,
-                          maxValue: 59,
-                          onChanged: (newValue) {
-                            setState(() {
-                              thisMinute = newValue;
-                            });
-                          },
-                        );
-                      }),
-                    ],
-                  ),
-                ),
-
-                // Choose duration in seconds by user input, number keyboard
-
-                TextField(
-                  controller: putDurationController,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(
-                      border: OutlineInputBorder(),
-                      labelText: "Thời lượng (giây)"),
-                  onChanged: (value) {
-                    setState(() {
-                      thisDuration = int.tryParse(value) ?? 0;
-                      if (thisDuration > 86400) {
-                        putDurationController.text =
-                            '86400'; // Cap value at 86400
-                        thisDuration = 86400;
-                      }
-                    });
-                  },
-                ),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Expanded(
-                      child: Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 8.0),
-                        child: Text(
-                          "Lặp lại hằng ngày",
-                          textAlign: TextAlign.end,
-                        ),
-                      ),
-                    ),
-                    StatefulBuilder(builder: (context, setState) {
-                      return Switch(
-                        value: thisRepeat == 1,
-                        onChanged: (value) {
-                          setState(() {
-                            thisRepeat = value ? 1 : 0;
-                          });
-                        },
-                      );
-                    }),
-                  ],
-                ),
-              ],
-            ),
-            actions: <Widget>[
-              TextButton(
-                child: const Text('Huỷ'),
-                onPressed: () {
-                  Navigator.of(context).pop();
-                },
-              ),
-              TextButton(
-                child: const Text('OK'),
-                onPressed: () async {
-                  print("Repeat: $thisRepeat");
-                  // Close the dialog
-                  // Post the schedule
-                  await _putSchedule(id, {
+      isScrollControlled: true,
+      useSafeArea: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => _ScheduleFormSheet(
+        title: 'Sửa lịch hẹn giờ',
+        initialHour: hour,
+        initialMinute: minute,
+        initialDuration: duration,
+        initialRepeat: repeat,
+        onSubmit: (h, m, dur, rep) {
+          context.read<SchedulerBloc>().add(
+                SchedulerUpdateRequested(
+                  id: id,
+                  serial: device.deviceSerial,
+                  updates: {
                     "time":
-                        "${thisHour.toString().padLeft(2, '0')}:${thisMinute.toString().padLeft(2, '0')}",
-                    "numberTime": thisDuration,
-                    "repeat": thisRepeat,
-                    "updateTime": DateTime.now().toIso8601String()
-                  });
-                  Fluttertoast.showToast(
-                      msg: "Sửa hẹn giờ thành công!",
-                      toastLength: Toast.LENGTH_SHORT,
-                      gravity: ToastGravity.BOTTOM,
-                      timeInSecForIosWeb: 1,
-                      backgroundColor: Theme.of(context).primaryColor,
-                      textColor: Colors.white,
-                      fontSize: 16.0);
-                  Navigator.of(context).pop();
-                },
-              ),
-            ],
-          ),
-        );
-      },
+                        "${h.toString().padLeft(2, '0')}:${m.toString().padLeft(2, '0')}",
+                    "numberTime": dur,
+                    "repeat": rep,
+                    "updateTime": DateTime.now().toIso8601String(),
+                  },
+                ),
+              );
+        },
+      ),
     );
   }
 
-  @override
-  void initState() {
-    super.initState();
-    _getSchedule(widget.device.deviceSerial);
+  void _showDeleteConfirmDialog(BuildContext context, String id) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog.adaptive(
+          title: const Text("Xác nhận xóa"),
+          content:
+              const Text("Bạn có chắc chắn muốn xóa lịch hẹn này không?"),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text("Huỷ",
+                  style: TextStyle(color: Colors.black)),
+            ),
+            TextButton(
+              onPressed: () {
+                context.read<SchedulerBloc>().add(
+                      SchedulerDeleteRequested(
+                        id: id,
+                        serial: device.deviceSerial,
+                      ),
+                    );
+                Navigator.of(dialogContext).pop();
+              },
+              child: const Text("Xóa", style: TextStyle(color: Colors.red)),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        appBar: AppBar(
-          title: const Text("Hẹn giờ thiết bị"),
-          centerTitle: true,
-        ),
-        body: SafeArea(
-          child: Center(
-            child: _isLoading // Modify this line
-                ? const CircularProgressIndicator.adaptive()
-                : (_schedules.isEmpty)
-                    ? Column(
-                        children: [
-                          Container(
-                            decoration: BoxDecoration(
-                              color: Theme.of(context).focusColor,
-                            ),
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 16.0, vertical: 8.0),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  mainAxisAlignment: MainAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                        "Serial: ${widget.device.deviceSerial}",
-                                        style: const TextStyle(fontSize: 16)),
-                                    Text(
-                                        "Số lịch hẹn đã đặt: ${_schedules.length}",
-                                        style: const TextStyle(fontSize: 16)),
-                                  ],
-                                ),
-                                (Platform.isIOS)
-                                    ? CupertinoButton(
-                                        onPressed: () {
-                                          _showScheduleDialog();
-                                        },
-                                        child: const Text("Thêm"))
-                                    : ElevatedButton(
-                                        onPressed: () {
-                                          _showScheduleDialog();
-                                        },
-                                        child: const Text("Thêm"))
-                              ],
-                            ),
-                          ),
-                          const SizedBox(height: 10),
-                          const Center(
-                            child: Text("Chưa có hẹn giờ cho thiết bị này."),
-                          ),
-                        ],
+      appBar: AppBar(
+        title: const Text("Hẹn giờ thiết bị"),
+        centerTitle: true,
+      ),
+      body: SafeArea(
+        child: BlocConsumer<SchedulerBloc, SchedulerState>(
+          listenWhen: (previous, current) =>
+              current is SchedulerActionSuccess ||
+              current is SchedulerActionFailure ||
+              current is SchedulerLoadFailure,
+          listener: (context, state) {
+            if (state is SchedulerActionSuccess) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(state.message),
+                  backgroundColor: Theme.of(context).primaryColor,
+                  behavior: SnackBarBehavior.floating,
+                  duration: const Duration(seconds: 2),
+                ),
+              );
+            } else if (state is SchedulerActionFailure) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(state.message),
+                  backgroundColor: Colors.red,
+                  behavior: SnackBarBehavior.floating,
+                  duration: const Duration(seconds: 3),
+                ),
+              );
+            } else if (state is SchedulerLoadFailure) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(state.message),
+                  backgroundColor: Colors.red,
+                  behavior: SnackBarBehavior.floating,
+                  action: SnackBarAction(
+                    label: 'Thử lại',
+                    textColor: Colors.white,
+                    onPressed: () => context.read<SchedulerBloc>().add(
+                          SchedulerLoadRequested(device.deviceSerial),
+                        ),
+                  ),
+                ),
+              );
+            }
+          },
+          buildWhen: (previous, current) =>
+              current is SchedulerLoadInProgress ||
+              current is SchedulerLoadSuccess ||
+              current is SchedulerLoadFailure ||
+              current is SchedulerActionInProgress ||
+              current is SchedulerActionSuccess ||
+              current is SchedulerActionFailure,
+          builder: (context, state) {
+            if (state is SchedulerLoadInProgress) {
+              return const Center(child: CircularProgressIndicator.adaptive());
+            }
+
+            final schedules = switch (state) {
+              SchedulerLoadSuccess(:final schedules) => schedules,
+              SchedulerActionInProgress(:final schedules) => schedules,
+              SchedulerActionSuccess(:final schedules) => schedules,
+              SchedulerActionFailure(:final schedules) => schedules,
+              _ => <Map<String, dynamic>>[],
+            };
+
+            final isActionInProgress = state is SchedulerActionInProgress;
+
+            return Stack(
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _SchedulerHeader(
+                      device: device,
+                      scheduleCount: schedules.length,
+                      onAddPressed: isActionInProgress
+                          ? null
+                          : () => _showScheduleSheet(context),
+                    ),
+                    if (schedules.isEmpty)
+                      const Expanded(
+                        child: Center(
+                          child:
+                              Text("Chưa có hẹn giờ cho thiết bị này."),
+                        ),
                       )
-                    : Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Container(
-                            decoration: BoxDecoration(
-                              color: Theme.of(context).focusColor,
-                            ),
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 16.0, vertical: 8.0),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  mainAxisAlignment: MainAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                        "Serial: ${widget.device.deviceSerial}",
-                                        style: const TextStyle(fontSize: 16)),
-                                    Text(
-                                        "Số lịch hẹn đã đặt: ${_schedules.length}",
-                                        style: const TextStyle(fontSize: 16)),
-                                  ],
-                                ),
-                                (Platform.isIOS)
-                                    ? CupertinoButton(
-                                        onPressed: () {
-                                          _showScheduleDialog();
-                                        },
-                                        child: const Text("Thêm"))
-                                    : ElevatedButton(
-                                        onPressed: () {
-                                          _showScheduleDialog();
-                                        },
-                                        child: const Text("Thêm"))
-                              ],
-                            ),
-                          ),
-                          Expanded(
-                            child: _schedules.isEmpty
-                                ? const Center(
-                                    child: Text(
-                                        "Chưa có hẹn giờ cho thiết bị này."),
-                                  )
-                                : ListView(
-                                    children: _schedules.map((schedule) {
-                                      return Slidable(
-                                        key: Key(schedule['Id'].toString()),
-                                        endActionPane: ActionPane(
-                                          motion: const ScrollMotion(),
-                                          children: [
-                                            SlidableAction(
-                                              onPressed:
-                                                  (BuildContext context) {
-                                                _showAlterScheduleDialog(
-                                                    schedule['Id'],
-                                                    int.parse(schedule['Time']
-                                                        .split(":")[0]),
-                                                    int.parse(schedule['Time']
-                                                        .split(":")[1]),
-                                                    schedule['NumberTime'],
-                                                    schedule['Repeat']);
-                                              },
-                                              icon: Icons.edit,
-                                              backgroundColor: Theme.of(context)
-                                                  .primaryColor,
-                                            ),
-                                            SlidableAction(
-                                              onPressed:
-                                                  (BuildContext context) {
-                                                // show dialog to confirm delete
-                                                showDialog(
-                                                  context: context,
-                                                  builder:
-                                                      (BuildContext context) {
-                                                    return AlertDialog.adaptive(
-                                                      title: const Text(
-                                                          "Xác nhận xóa"),
-                                                      content: const Text(
-                                                          "Bạn có chắc chắn muốn xóa lịch hẹn này không?"),
-                                                      actions: <Widget>[
-                                                        TextButton(
-                                                          onPressed: () {
-                                                            Navigator.of(
-                                                                    context)
-                                                                .pop();
-                                                          },
-                                                          child: const Text(
-                                                            "Huỷ",
-                                                            style: TextStyle(
-                                                                color: Colors
-                                                                    .black),
-                                                          ),
-                                                        ),
-                                                        TextButton(
-                                                          onPressed: () async {
-                                                            print(
-                                                                schedule['Id']);
-                                                            _deleteSchedule(
-                                                                schedule['Id']);
-                                                            print("did delete");
-                                                            Navigator.of(
-                                                                    context)
-                                                                .pop();
-                                                            Fluttertoast.showToast(
-                                                                msg:
-                                                                    "Xoá hẹn giờ thành công!",
-                                                                toastLength: Toast
-                                                                    .LENGTH_SHORT,
-                                                                gravity:
-                                                                    ToastGravity
-                                                                        .BOTTOM,
-                                                                timeInSecForIosWeb:
-                                                                    1,
-                                                                backgroundColor:
-                                                                    Theme.of(
-                                                                            context)
-                                                                        .primaryColor,
-                                                                textColor:
-                                                                    Colors
-                                                                        .white,
-                                                                fontSize: 16.0);
-                                                          },
-                                                          child: const Text(
-                                                            "Xóa",
-                                                            style: TextStyle(
-                                                                color:
-                                                                    Colors.red),
-                                                          ),
-                                                        ),
-                                                      ],
-                                                    );
-                                                  },
-                                                );
-                                              },
-                                              icon: Icons.delete,
-                                              backgroundColor:
-                                                  Colors.deepOrangeAccent[100]!,
-                                            ),
-                                          ],
-                                        ),
-                                        child: Container(
-                                          decoration: BoxDecoration(
-                                              border: Border(
-                                                  bottom: BorderSide(
-                                                      color: Colors.grey[300]!,
-                                                      width: 1.0))),
-                                          padding: const EdgeInsets.symmetric(
-                                              vertical: 8.0),
-                                          child: ListTile(
-                                            title: Padding(
-                                              padding: const EdgeInsets.only(
-                                                  bottom: 8.0),
-                                              child:
-                                                  // Text(schedule['NameDevice']),
-                                                  Row(
-                                                children: [
-                                                  Text(
-                                                      "Lịch chạy | ${schedule['Repeat'] == 1 ? "Lặp lại hằng ngày" : "Chỉ hôm nay"}"),
-                                                ],
-                                              ),
-                                            ),
-                                            subtitle: Row(
-                                              children: [
-                                                ScheduleTag(
-                                                    icon: Icons.alarm,
-                                                    text: schedule["Time"],
-                                                    textColor: Colors.black,
-                                                    color: Theme.of(context)
-                                                        .primaryColorLight),
-                                                const SizedBox(width: 10),
-                                                ScheduleTag(
-                                                    icon: Icons.timer,
-                                                    text:
-                                                        "${schedule['NumberTime']}s",
-                                                    textColor: Colors.black,
-                                                    color:
-                                                        Colors.deepOrangeAccent[
-                                                            100]!),
-                                                // const SizedBox(width: 10),
-                                                // ScheduleTag(
-                                                //     icon: Icons.calendar_month,
-                                                //     text: (schedule["repeat"] ==
-                                                //             1)
-                                                //         ? "Hằng ngày"
-                                                //         : "Hôm nay",
-                                                //     textColor: Colors.black,
-                                                //     color: Colors.yellow[100]!),
-                                              ],
-                                            ),
-                                            trailing: Switch(
-                                              value: schedule['Status'] == 1,
-                                              onChanged: (value) async {
-                                                // Update the status in the schedule map
-                                                schedule['Status'] =
-                                                    value ? 1 : 0;
-
-                                                // Update the switch value in the state
-                                                setState(() {
-                                                  _switchValue = value;
-                                                });
-
-                                                // Send a PUT request with the updated schedule
-                                                await _putSchedule(
-                                                    schedule['Id'], schedule);
-                                              },
-                                            ),
-                                          ),
-                                        ),
-                                      );
-                                    }).toList(),
-                                  ),
-                          ),
-                        ],
+                    else
+                      Expanded(
+                        child: ListView.builder(
+                          itemCount: schedules.length,
+                          itemBuilder: (context, index) {
+                            final schedule = schedules[index];
+                            return _ScheduleItem(
+                              schedule: schedule,
+                              isDisabled: isActionInProgress,
+                              onEdit: () => _showEditSheet(
+                                context,
+                                schedule['Id'],
+                                int.parse(schedule['Time'].split(":")[0]),
+                                int.parse(schedule['Time'].split(":")[1]),
+                                schedule['NumberTime'],
+                                schedule['Repeat'],
+                              ),
+                              onDelete: () => _showDeleteConfirmDialog(
+                                  context, schedule['Id']),
+                              onToggleStatus: (value) {
+                                final updated =
+                                    Map<String, dynamic>.from(schedule);
+                                updated['Status'] = value ? 1 : 0;
+                                context.read<SchedulerBloc>().add(
+                                      SchedulerUpdateRequested(
+                                        id: schedule['Id'],
+                                        serial: device.deviceSerial,
+                                        updates: updated,
+                                      ),
+                                    );
+                              },
+                            );
+                          },
+                        ),
                       ),
+                  ],
+                ),
+                if (isActionInProgress)
+                  const Positioned.fill(
+                    child: ColoredBox(
+                      color: Colors.black12,
+                      child: Center(
+                        child: CircularProgressIndicator.adaptive(),
+                      ),
+                    ),
+                  ),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Form bottom sheet
+// ---------------------------------------------------------------------------
+
+class _ScheduleFormSheet extends StatefulWidget {
+  final String title;
+  final int initialHour;
+  final int initialMinute;
+  final int initialDuration;
+  final int initialRepeat;
+  final void Function(int hour, int minute, int duration, int repeat) onSubmit;
+
+  const _ScheduleFormSheet({
+    required this.title,
+    required this.onSubmit,
+    this.initialHour = 0,
+    this.initialMinute = 0,
+    this.initialDuration = 0,
+    this.initialRepeat = 0,
+  });
+
+  @override
+  State<_ScheduleFormSheet> createState() => _ScheduleFormSheetState();
+}
+
+class _ScheduleFormSheetState extends State<_ScheduleFormSheet> {
+  late int _hour;
+  late int _minute;
+  late int _duration;
+  late bool _repeat;
+  late final TextEditingController _durationController;
+  String? _durationError;
+
+  @override
+  void initState() {
+    super.initState();
+    _hour = widget.initialHour;
+    _minute = widget.initialMinute;
+    _duration = widget.initialDuration;
+    _repeat = widget.initialRepeat == 1;
+    _durationController = TextEditingController(
+      text: _duration > 0 ? _duration.toString() : '',
+    );
+  }
+
+  @override
+  void dispose() {
+    _durationController.dispose();
+    super.dispose();
+  }
+
+  String _formatDuration(int seconds) {
+    if (seconds <= 0) return '';
+    final h = seconds ~/ 3600;
+    final m = (seconds % 3600) ~/ 60;
+    final s = seconds % 60;
+    final parts = <String>[
+      if (h > 0) '$h giờ',
+      if (m > 0) '$m phút',
+      if (s > 0) '$s giây',
+    ];
+    return parts.isEmpty ? '' : parts.join(' ');
+  }
+
+  void _onDurationChanged(String value) {
+    final parsed = int.tryParse(value) ?? 0;
+    setState(() {
+      if (parsed > 86400) {
+        _duration = 86400;
+        _durationController.text = '86400';
+        _durationController.selection = TextSelection.collapsed(
+          offset: _durationController.text.length,
+        );
+      } else {
+        _duration = parsed;
+      }
+      _durationError = null;
+    });
+  }
+
+  void _submit() {
+    if (_duration <= 0) {
+      setState(() => _durationError = 'Vui lòng nhập thời lượng lớn hơn 0');
+      return;
+    }
+    Navigator.of(context).pop();
+    widget.onSubmit(_hour, _minute, _duration, _repeat ? 1 : 0);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final humanDuration = _formatDuration(_duration);
+
+    return Padding(
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
+      child: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Drag handle
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              Text(
+                widget.title,
+                style: theme.textTheme.titleLarge
+                    ?.copyWith(fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 20),
+              // Time preview banner
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 16, vertical: 12),
+                decoration: BoxDecoration(
+                  color: colorScheme.primaryContainer,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.schedule,
+                        color: colorScheme.onPrimaryContainer, size: 20),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Lịch sẽ chạy lúc '
+                      '${_hour.toString().padLeft(2, '0')}:${_minute.toString().padLeft(2, '0')}',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: colorScheme.onPrimaryContainer,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              // Time pickers
+              Text('Chọn giờ',
+                  style: theme.textTheme.labelLarge
+                      ?.copyWith(color: colorScheme.onSurfaceVariant)),
+              const SizedBox(height: 8),
+              Container(
+                decoration: BoxDecoration(
+                  border: Border.all(color: colorScheme.outlineVariant),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    NumberPicker(
+                      itemHeight: 40,
+                      textStyle: TextStyle(
+                          fontSize: 15,
+                          color: colorScheme.onSurfaceVariant),
+                      selectedTextStyle: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          color: colorScheme.primary),
+                      zeroPad: true,
+                      haptics: true,
+                      value: _hour,
+                      infiniteLoop: true,
+                      minValue: 0,
+                      maxValue: 23,
+                      onChanged: (v) => setState(() => _hour = v),
+                    ),
+                    Text(
+                      ':',
+                      style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: colorScheme.primary),
+                    ),
+                    NumberPicker(
+                      itemHeight: 40,
+                      textStyle: TextStyle(
+                          fontSize: 15,
+                          color: colorScheme.onSurfaceVariant),
+                      selectedTextStyle: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          color: colorScheme.primary),
+                      infiniteLoop: true,
+                      zeroPad: true,
+                      haptics: true,
+                      value: _minute,
+                      minValue: 0,
+                      maxValue: 59,
+                      onChanged: (v) => setState(() => _minute = v),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              // Duration field
+              TextField(
+                controller: _durationController,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                  border: const OutlineInputBorder(),
+                  labelText: 'Thời lượng (giây)',
+                  errorText: _durationError,
+                  helperText:
+                      humanDuration.isNotEmpty ? humanDuration : null,
+                  helperStyle:
+                      TextStyle(color: colorScheme.primary),
+                  suffixIcon: const Icon(Icons.timer_outlined),
+                ),
+                onChanged: _onDurationChanged,
+              ),
+              const SizedBox(height: 4),
+              // Repeat toggle
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Lặp lại hằng ngày'),
+                subtitle: Text(
+                  _repeat ? 'Chạy mỗi ngày' : 'Chỉ chạy một lần',
+                  style: TextStyle(color: colorScheme.onSurfaceVariant),
+                ),
+                value: _repeat,
+                onChanged: (v) => setState(() => _repeat = v),
+              ),
+              const SizedBox(height: 8),
+              // Actions
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      child: const Text('Huỷ'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: FilledButton(
+                      onPressed: _submit,
+                      child: const Text('Lưu lịch'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
-        ));
+        ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Sub-widgets
+// ---------------------------------------------------------------------------
+
+class _SchedulerHeader extends StatelessWidget {
+  final Device device;
+  final int scheduleCount;
+  final VoidCallback? onAddPressed;
+
+  const _SchedulerHeader({
+    required this.device,
+    required this.scheduleCount,
+    required this.onAddPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(color: Theme.of(context).focusColor),
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text("Serial: ${device.deviceSerial}",
+                  style: const TextStyle(fontSize: 16)),
+              Text("Số lịch hẹn đã đặt: $scheduleCount",
+                  style: const TextStyle(fontSize: 16)),
+            ],
+          ),
+          ElevatedButton.icon(
+            onPressed: onAddPressed,
+            icon: const Icon(Icons.add, size: 18),
+            label: const Text("Thêm"),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ScheduleItem extends StatelessWidget {
+  final Map<String, dynamic> schedule;
+  final bool isDisabled;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
+  final ValueChanged<bool> onToggleStatus;
+
+  const _ScheduleItem({
+    required this.schedule,
+    required this.isDisabled,
+    required this.onEdit,
+    required this.onDelete,
+    required this.onToggleStatus,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Slidable(
+      key: Key(schedule['Id'].toString()),
+      endActionPane: ActionPane(
+        motion: const ScrollMotion(),
+        children: [
+          SlidableAction(
+            onPressed: isDisabled ? null : (_) => onEdit(),
+            icon: Icons.edit,
+            backgroundColor: Theme.of(context).primaryColor,
+          ),
+          SlidableAction(
+            onPressed: isDisabled ? null : (_) => onDelete(),
+            icon: Icons.delete,
+            backgroundColor: Colors.deepOrangeAccent[100]!,
+          ),
+        ],
+      ),
+      child: Container(
+        decoration: BoxDecoration(
+          border: Border(
+              bottom: BorderSide(color: Colors.grey[300]!, width: 1.0)),
+        ),
+        padding: const EdgeInsets.symmetric(vertical: 8.0),
+        child: ListTile(
+          title: Padding(
+            padding: const EdgeInsets.only(bottom: 8.0),
+            child: Text(
+              "Lịch chạy | ${schedule['Repeat'] == 1 ? 'Lặp lại hằng ngày' : 'Chỉ hôm nay'}",
+            ),
+          ),
+          subtitle: Row(
+            children: [
+              ScheduleTag(
+                icon: Icons.alarm,
+                text: schedule["Time"],
+                textColor: Colors.black,
+                color: Theme.of(context).primaryColorLight,
+              ),
+              const SizedBox(width: 10),
+              ScheduleTag(
+                icon: Icons.timer,
+                text: "${schedule['NumberTime']}s",
+                textColor: Colors.black,
+                color: Colors.deepOrangeAccent[100]!,
+              ),
+            ],
+          ),
+          trailing: Switch(
+            value: schedule['Status'] == 1,
+            onChanged: isDisabled ? null : onToggleStatus,
+          ),
+        ),
+      ),
+    );
   }
 }

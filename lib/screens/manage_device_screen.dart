@@ -5,7 +5,6 @@ import 'dart:async';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-// import 'package:fluttertoast/fluttertoast.dart';
 import 'package:iot_app/bloc/device/device_bloc.dart';
 import 'package:iot_app/bloc/device/device_event.dart';
 import 'package:iot_app/bloc/device/device_state.dart';

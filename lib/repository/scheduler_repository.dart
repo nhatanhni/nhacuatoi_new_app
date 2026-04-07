@@ -57,6 +57,7 @@ class SchedulerRepository {
         'Authorization': 'Bearer ${await _getToken()}',
       },
     );
+    print("schedule by serial response: ${response.body}");
 
     if (response.statusCode == 200) {
       final responseBody = jsonDecode(response.body);
@@ -80,7 +81,6 @@ class SchedulerRepository {
     );
 
     if (response.statusCode != 200) {
-      // print("Status code: ${response.statusCode}");
       throw Exception('Failed to create schedule');
     }
   }

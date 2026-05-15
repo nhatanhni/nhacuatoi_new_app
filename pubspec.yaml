@@ -48,13 +48,14 @@ dependencies:
   # qr_code_scanner: ^1.0.1  # Commented out for iOS build
   wifi_scan: ^0.4.0+3
   # permission_handler: ^12.0.0+1
-  wifi_iot: ^0.3.18
+  wifi_iot: ^0.3.18  # Commented out - only used in wifi_setup_screen_old.dart which is disabled
   fluttertoast: ^9.0.0
-  fl_chart: ^0.69.0
+  fl_chart: ^1.2.0
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.2
+  plugin_wifi_connect: ^2.0.1
 
 dev_dependencies:
   flutter_test:

@@ -1,8 +1,8 @@
 // ignore_for_file: avoid_print
 
 import 'package:android_alarm_manager_plus/android_alarm_manager_plus.dart';
-import 'package:iot_app/database/database_helper.dart';
-import 'package:iot_app/repository/mqtt_manager.dart';
+import 'package:iot_app/core/services/database_helper.dart';
+import 'package:iot_app/core/services/mqtt_manager.dart';
 
 void deviceScheduler(int deviceId, Map<String, dynamic> params) async {
   // Extract the duration and repeat from the params

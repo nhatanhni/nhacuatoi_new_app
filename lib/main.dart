@@ -16,7 +16,9 @@ import 'package:iot_app/bloc/mqtt/mqtt_bloc.dart';
 import 'package:iot_app/bloc/mqtt/mqtt_event.dart';
 import 'package:iot_app/repository/mqtt_manager.dart';
 import 'package:iot_app/repository/api_service.dart';
+import 'package:iot_app/repository/biometric_repository.dart';
 import 'package:iot_app/repository/user_repository.dart';
+import 'package:iot_app/core/network/auth_http_client.dart';
 import 'package:iot_app/screens/UserListScreen.dart';
 import 'package:iot_app/screens/device_list_screen.dart';
 import 'package:iot_app/screens/device_scheduling_screen.dart';
@@ -29,6 +31,7 @@ import 'package:iot_app/screens/splash_screen.dart';
 import 'package:iot_app/models/device.dart';
 import 'package:android_alarm_manager_plus/android_alarm_manager_plus.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:iot_app/screens/forgot_password_screen.dart';
 import 'package:iot_app/screens/register_screen.dart';
 import 'package:workmanager/workmanager.dart';
 import 'package:iot_app/screens/pump_station_screen.dart';
@@ -106,9 +109,30 @@ class MyApp extends StatelessWidget {
   static final RouteObserver<ModalRoute<void>> routeObserver =
       RouteObserver<ModalRoute<void>>();
 
+  static ApiService get apiService => _apiService;
+
   // Create shared instances once — NOT inside build() to avoid recreating on every rebuild
-  static final _apiService = ApiService();
   static final _userRepository = UserRepository();
+  static final _authHttpClient = AuthHttpClient(
+    userRepository: _userRepository,
+    onSessionExpired: () {
+      navigatorKey.currentState?.pushNamedAndRemoveUntil(
+        '/login',
+        (_) => false,
+      );
+    },
+    onTokenRefreshed: (newAccess, newRefresh) {
+      // Chỉ đồng bộ accessToken — biometricRefreshToken là token riêng biệt
+      // được quản lý độc lập, không được ghi đè bởi phiến thường.
+      _biometricRepository.isBiometricEnabled().then((enabled) {
+        if (enabled) {
+          _biometricRepository.saveAccessToken(newAccess);
+        }
+      });
+    },
+  );
+  static final _apiService = ApiService(authClient: _authHttpClient);
+  static final _biometricRepository = BiometricRepository();
   static final _mqttManager = MQTTManager.instance;
   static final _notificationService = NotificationService();
 
@@ -124,9 +148,11 @@ class MyApp extends StatelessWidget {
     return MultiBlocProvider(
       providers: [
         BlocProvider<AuthBloc>(
-          create: (_) =>
-              AuthBloc(apiService: _apiService, userRepository: _userRepository)
-                ..add(AuthCheckRequested()),
+          create: (_) => AuthBloc(
+            apiService: _apiService,
+            userRepository: _userRepository,
+            biometricRepository: _biometricRepository,
+          )..add(AuthCheckRequested()),
         ),
         BlocProvider<DeviceBloc>(
           create: (_) => DeviceBloc(
@@ -205,6 +231,7 @@ class _AppViewState extends State<_AppView> {
       routes: {
         '/': (context) => const SplashScreen(),
         '/register': (context) => RegisterScreen(),
+        ForgotPasswordScreen.routeName: (context) => const ForgotPasswordScreen(),
         '/login': (context) => LoginScreen(),
         '/add_device': (context) => AddDeviceScreen(),
         '/manage_device': (context) => ManageDeviceScreen(),

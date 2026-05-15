@@ -1,7 +1,6 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:iot_app/main.dart';
 import 'package:iot_app/repository/api_service.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 class UserListScreen extends StatefulWidget {
   static const routeName = '/user_list';
@@ -14,7 +13,7 @@ class UserListScreen extends StatefulWidget {
 
 class _UserListScreenState extends State<UserListScreen> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
-  final ApiService _apiService = ApiService();
+  late final ApiService _apiService;
   String? _userId;
   String? _userName;
   String? _fullName;
@@ -24,21 +23,15 @@ class _UserListScreenState extends State<UserListScreen> {
   @override
   void initState() {
     super.initState();
+    // Use the app-wide shared ApiService instance.
+    _apiService = MyApp.apiService;
     _getUserInfo(); // Load user info when the screen initializes
   }
 
   // Method to get user info
   void _getUserInfo() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    String? accessToken = prefs.getString('accessToken');
-
-    if (accessToken == null) {
-      Navigator.pushReplacementNamed(context, '/login');
-      return;
-    }
-
     try {
-      final response = await _apiService.getUserInfo(accessToken);
+      final response = await _apiService.getUserInfo();
       setState(() {
         _userId = response['Data']['Id'] as String?;
         _userName = response['Data']['UserName'] as String?;
@@ -48,20 +41,15 @@ class _UserListScreenState extends State<UserListScreen> {
       });
     } catch (e) {
       print('Error getting user info: $e');
-      // Handle error if necessary
     }
   }
 
   // Method to delete the current user
   void _deleteUser() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    String? accessToken = prefs.getString('accessToken');
-
-    if (_userId == null || accessToken == null) return;
+    if (_userId == null) return;
 
     try {
-      await _apiService.deleteUserById(_userId!, accessToken);
-      prefs.remove('accessToken');
+      await _apiService.deleteUserById(_userId!);
       Navigator.pushReplacementNamed(context, '/login');
     } catch (e) {
       print('Error deleting user: $e');

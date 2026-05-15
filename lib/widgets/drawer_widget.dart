@@ -24,8 +24,15 @@ class _AppDrawerState extends State<AppDrawer> {
 
   @override
   Widget build(BuildContext context) {
-    return Drawer(
-      child: ListView(
+    return BlocListener<AuthBloc, AuthState>(
+      listener: (context, state) {
+        if (state is AuthUnauthenticated) {
+          Navigator.pushNamedAndRemoveUntil(
+              context, '/login', (route) => false);
+        }
+      },
+      child: Drawer(
+        child: ListView(
         // Important: Remove any padding from the ListView.
         padding: EdgeInsets.zero,
         children: [
@@ -187,11 +194,10 @@ class _AppDrawerState extends State<AppDrawer> {
                       TextButton(
                         child: const Text("Đăng xuất"),
                         onPressed: () {
-                          context.read<AuthBloc>().add(AuthLogoutRequested());
-                          print("Đăng xuất thành công!");
+                          // Close the confirmation dialog first
                           Navigator.of(context).pop();
-                          Navigator.pushNamedAndRemoveUntil(
-                              context, "/login", (route) => false);
+                          // Dispatch logout — BlocListener will navigate on AuthUnauthenticated
+                          context.read<AuthBloc>().add(AuthLogoutRequested());
                         },
                       ),
                     ],
@@ -201,6 +207,7 @@ class _AppDrawerState extends State<AppDrawer> {
             },
           ),
         ],
+      ),
       ),
     );
   }

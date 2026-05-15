@@ -20,7 +20,7 @@ import 'package:iot_app/widgets/device_detail_button_widget.dart';
 import 'package:iot_app/widgets/device_socket_metrics_tab.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:syncfusion_flutter_gauges/gauges.dart';
-import 'package:iot_app/repository/api_service.dart';
+import 'package:iot_app/main.dart';
 import 'package:iot_app/utils/socket_metrics_parser.dart';
 import 'package:iot_app/core/state/selected_device_provider.dart';
 
@@ -123,7 +123,7 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen>
         return;
       }
 
-      final api = ApiService();
+      final api = MyApp.apiService;
       final List<dynamic> data = await api.fetchDeviceHistoryByDeviceId(id);
       final events = data
           .map((e) => SwitchEvent.fromJson(e as Map<String, dynamic>))
@@ -586,7 +586,7 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen>
       _waterError = null;
     });
     try {
-      final api = ApiService();
+      final api = MyApp.apiService;
       final data = await api.fetchWaterMeterData(widget.device.deviceSerial);
       setState(() {
         _waterMeterData = data;

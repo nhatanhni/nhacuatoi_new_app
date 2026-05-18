@@ -6,12 +6,11 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:iot_app/bloc/device/device_bloc.dart';
 import 'package:iot_app/bloc/device/device_event.dart';
 import 'package:iot_app/bloc/device/device_state.dart';
-import 'package:iot_app/repository/mqtt_manager.dart';
-import 'package:iot_app/widgets/appbar_dropdown_widget.dart';
+import 'package:iot_app/core/services/mqtt_manager.dart';
 import 'package:iot_app/widgets/drawer_widget.dart';
-import 'package:iot_app/models/device.dart';
+import 'package:iot_app/core/models/device.dart';
 import 'package:iot_app/core/state/selected_device_provider.dart';
-import 'package:iot_app/screens/device_detail_screen.dart';
+import 'package:iot_app/screens/device_list/device_detail/device_detail_screen.dart';
 import 'package:mqtt_client/mqtt_client.dart';
 
 class DeviceListScreen extends StatefulWidget {
@@ -608,7 +607,7 @@ class _DeviceListScreenState extends State<DeviceListScreen> {
         backgroundColor: Colors.white,
         foregroundColor: Colors.black87,
         leading: Navigator.canPop(context) ? const BackButton() : null,
-        actions: const [AppBarDropdown()],
+        actions: const [],
         title: Column(
           children: [
             const Text(

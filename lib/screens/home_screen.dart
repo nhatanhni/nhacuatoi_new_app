@@ -1,10 +1,11 @@
+// ignore_for_file: unused_element
 import 'package:flutter/material.dart';
 import '../widgets/drawer_widget.dart';
-import '../widgets/top_bar.dart';
-import '../database/database_helper.dart'
-    if (dart.library.html) '../database/web_database_helper.dart';
+import 'package:iot_app/core/widgets/top_bar.dart';
+import 'package:iot_app/core/services/database_helper.dart'
+    if (dart.library.html) 'package:iot_app/core/services/web_database_helper.dart';
 import '../core/state/selected_device_provider.dart';
-import 'device_detail_screen.dart';
+import 'package:iot_app/screens/device_list/device_detail/device_detail_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class HomeScreen extends StatefulWidget {

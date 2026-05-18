@@ -1,5 +1,5 @@
 import 'package:equatable/equatable.dart';
-import 'package:iot_app/models/organization_unit.dart';
+import 'package:iot_app/core/models/organization_unit.dart';
 
 abstract class OrganizationState extends Equatable {
   const OrganizationState();

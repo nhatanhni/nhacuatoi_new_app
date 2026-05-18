@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:iot_app/core/config/app_config.dart';
-import 'package:iot_app/repository/user_repository.dart';
+import 'package:iot_app/core/services/user_repository.dart';
 
 typedef SessionExpiredCallback = void Function();
 typedef TokenRefreshedCallback = void Function(String newAccessToken, String newRefreshToken);

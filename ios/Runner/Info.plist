@@ -101,5 +101,16 @@
 		</array>
 		<key>UIStatusBarHidden</key>
 		<false/>
+		<key>NSMicrophoneUsageDescription</key>
+		<string>This app needs microphone access for video recording and QR scanning.</string>
+		<key>NSNetworkUsageDescription</key>
+		<string>Ứng dụng cần truy cập mạng để giao tiếp với thiết bị IoT và cài đặt WiFi.</string>
+		<key>NSWiFiUsageDescription</key>
+		<string>Ứng dụng cần quyền WiFi để quét, kết nối và cài đặt mạng WiFi cho thiết bị IoT.</string>
+		<key>UIBackgroundModes</key>
+		<array>
+			<string>remote-notification</string>
+			<string>background-processing</string>
+		</array>
 	</dict>
 </plist>

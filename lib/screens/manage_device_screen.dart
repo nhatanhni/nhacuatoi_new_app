@@ -9,11 +9,10 @@ import 'package:iot_app/bloc/device/device_bloc.dart';
 import 'package:iot_app/bloc/device/device_event.dart';
 import 'package:iot_app/bloc/device/device_state.dart';
 import 'package:iot_app/core/state/selected_device_provider.dart';
-import 'package:iot_app/models/device.dart';
-import 'package:iot_app/screens/device_detail_screen.dart';
-import 'package:iot_app/widgets/appbar_dropdown_widget.dart';
+import 'package:iot_app/core/models/device.dart';
+import 'package:iot_app/screens/device_list/device_detail/device_detail_screen.dart';
 
-import '../utils/toast_helper.dart';
+import 'package:iot_app/core/utils/toast_helper.dart';
 
 class ManageDeviceScreen extends StatefulWidget {
   const ManageDeviceScreen({Key? key}) : super(key: key);
@@ -287,7 +286,7 @@ class _ManageDeviceScreenState extends State<ManageDeviceScreen> {
             ),
           ],
         ),
-        actions: [AppBarDropdown()],
+        actions: [],
       ),
       body: SafeArea(
         child: BlocListener<DeviceBloc, DeviceState>(

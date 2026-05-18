@@ -1,8 +1,8 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:iot_app/bloc/station/station_event.dart';
 import 'package:iot_app/bloc/station/station_state.dart';
-import 'package:iot_app/models/station_from_api.dart';
-import 'package:iot_app/repository/api_service.dart';
+import 'package:iot_app/core/models/station_from_api.dart';
+import 'package:iot_app/core/services/api_service.dart';
 
 class StationBloc extends Bloc<StationEvent, StationState> {
   final ApiService apiService;

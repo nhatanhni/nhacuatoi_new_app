@@ -5,8 +5,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:mqtt_client/mqtt_client.dart' as mqtt;
 import 'package:iot_app/bloc/mqtt/mqtt_event.dart';
 import 'package:iot_app/bloc/mqtt/mqtt_state.dart';
-import 'package:iot_app/repository/mqtt_manager.dart';
-import 'package:iot_app/widgets/notification_service.dart';
+import 'package:iot_app/core/services/mqtt_manager.dart';
+import 'package:iot_app/core/widgets/notification_service.dart';
 
 class MqttBloc extends Bloc<MqttEvent, MqttState> {
   final MQTTManager mqttManager;

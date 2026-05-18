@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:equatable/equatable.dart';
-import 'package:iot_app/models/device.dart';
+import 'package:iot_app/core/models/device.dart';
 
 abstract class DeviceEvent extends Equatable {
   const DeviceEvent();

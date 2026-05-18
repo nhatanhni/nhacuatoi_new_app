@@ -1,6 +1,6 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:iot_app/models/device.dart';
+import 'package:iot_app/core/models/device.dart';
 
 final selectedDeviceProvider = StateProvider<Device?>((ref) => null);
 

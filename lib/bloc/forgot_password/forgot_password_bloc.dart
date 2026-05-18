@@ -1,7 +1,7 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:iot_app/bloc/forgot_password/forgot_password_event.dart';
 import 'package:iot_app/bloc/forgot_password/forgot_password_state.dart';
-import 'package:iot_app/repository/api_service.dart';
+import 'package:iot_app/core/services/api_service.dart';
 
 class ForgotPasswordBloc
     extends Bloc<ForgotPasswordEvent, ForgotPasswordState> {

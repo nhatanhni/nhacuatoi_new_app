@@ -1,5 +1,5 @@
 import 'package:equatable/equatable.dart';
-import 'package:iot_app/models/station_from_api.dart';
+import 'package:iot_app/core/models/station_from_api.dart';
 
 abstract class StationState extends Equatable {
   const StationState();

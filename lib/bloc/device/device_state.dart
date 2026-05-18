@@ -1,7 +1,7 @@
 import 'package:equatable/equatable.dart';
-import 'package:iot_app/models/device_detail.dart';
-import 'package:iot_app/models/device.dart';
-import 'package:iot_app/models/device_from_api.dart';
+import 'package:iot_app/core/models/device_detail.dart';
+import 'package:iot_app/core/models/device.dart';
+import 'package:iot_app/core/models/device_from_api.dart';
 
 abstract class DeviceState extends Equatable {
   const DeviceState();

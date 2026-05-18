@@ -1,11 +1,11 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:iot_app/bloc/device/device_event.dart';
 import 'package:iot_app/bloc/device/device_state.dart';
-import 'package:iot_app/database/database_helper.dart';
-import 'package:iot_app/models/device.dart';
-import 'package:iot_app/models/device_detail.dart';
-import 'package:iot_app/models/device_from_api.dart';
-import 'package:iot_app/repository/api_service.dart';
+import 'package:iot_app/core/services/database_helper.dart';
+import 'package:iot_app/core/models/device.dart';
+import 'package:iot_app/core/models/device_detail.dart';
+import 'package:iot_app/core/models/device_from_api.dart';
+import 'package:iot_app/core/services/api_service.dart';
 
 class DeviceBloc extends Bloc<DeviceEvent, DeviceState> {
   final DatabaseHelper databaseHelper;
@@ -181,7 +181,7 @@ class DeviceBloc extends Bloc<DeviceEvent, DeviceState> {
     emit(DeviceLoading());
     try {
       final devices = await databaseHelper.queryDevicesByType(event.deviceType);
-      emit(DeviceLoaded([]));
+      emit(DeviceManageLoaded(devices));
     } catch (e) {
       emit(DeviceError(e.toString()));
     }

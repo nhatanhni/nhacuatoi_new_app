@@ -14,35 +14,35 @@ import 'package:iot_app/bloc/organization/organization_bloc.dart';
 import 'package:iot_app/bloc/organization/organization_event.dart';
 import 'package:iot_app/bloc/mqtt/mqtt_bloc.dart';
 import 'package:iot_app/bloc/mqtt/mqtt_event.dart';
-import 'package:iot_app/repository/mqtt_manager.dart';
-import 'package:iot_app/repository/api_service.dart';
-import 'package:iot_app/repository/biometric_repository.dart';
-import 'package:iot_app/repository/user_repository.dart';
+import 'package:iot_app/core/services/mqtt_manager.dart';
+import 'package:iot_app/core/services/api_service.dart';
+import 'package:iot_app/core/services/biometric_repository.dart';
+import 'package:iot_app/core/services/user_repository.dart';
 import 'package:iot_app/core/network/auth_http_client.dart';
 import 'package:iot_app/screens/UserListScreen.dart';
 import 'package:iot_app/screens/device_list_screen.dart';
-import 'package:iot_app/screens/device_scheduling_screen.dart';
+import 'package:iot_app/screens/device_list/device_detail/device_scheduling/device_scheduling_screen.dart';
 import 'package:iot_app/screens/home_screen.dart';
-import 'package:iot_app/screens/add_device_screen.dart';
+import 'package:iot_app/screens/device_list/add_device/add_device_screen.dart';
 import 'package:iot_app/screens/login_screen.dart';
 import 'package:iot_app/screens/manage_device_screen.dart';
-import 'package:iot_app/screens/device_detail_screen.dart';
+import 'package:iot_app/screens/device_list/device_detail/device_detail_screen.dart';
 import 'package:iot_app/screens/splash_screen.dart';
-import 'package:iot_app/models/device.dart';
+import 'package:iot_app/core/models/device.dart';
 import 'package:android_alarm_manager_plus/android_alarm_manager_plus.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:iot_app/screens/forgot_password_screen.dart';
 import 'package:iot_app/screens/register_screen.dart';
 import 'package:workmanager/workmanager.dart';
-import 'package:iot_app/screens/pump_station_screen.dart';
-import 'package:iot_app/screens/wifi_setup_screen.dart';
+import 'package:iot_app/screens/pump_station/pump_station_screen.dart';
+import 'package:iot_app/screens/wifi_setup/wifi_setup_screen.dart';
 import 'package:iot_app/screens/station_camera_screen.dart';
 import 'package:iot_app/widgets/drawer_widget.dart';
 import 'package:iot_app/core/state/app_shell_provider.dart';
 import 'package:iot_app/core/state/selected_device_provider.dart';
 
-import 'database/database_helper.dart';
-import 'widgets/notification_service.dart';
+import 'package:iot_app/core/services/database_helper.dart';
+import 'package:iot_app/core/widgets/notification_service.dart';
 
 @pragma('vm:entry-point')
 void callbackDispatcher() {
@@ -57,6 +57,7 @@ void callbackDispatcher() {
     return Future.value(true);
   });
 }
+
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -76,7 +77,7 @@ Future<void> main() async {
       await Workmanager().registerPeriodicTask(
         "1",
         "simpleTask",
-        frequency: Duration(minutes: 15),
+        frequency: const Duration(minutes: 15),
       );
     } catch (e) {
       print('Error registering Workmanager task: $e');
@@ -137,9 +138,15 @@ class MyApp extends StatelessWidget {
   static final _notificationService = NotificationService();
 
   final String initialRoute;
+  final String nextRoute;
   final Device? device;
 
-  const MyApp({super.key, this.initialRoute = '/', this.device});
+  const MyApp({
+    super.key,
+    this.initialRoute = '/',
+    this.nextRoute = '/login',
+    this.device,
+  });
 
   @override
   Widget build(BuildContext context) {

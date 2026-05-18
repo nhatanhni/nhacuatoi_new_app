@@ -1,9 +1,9 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:iot_app/bloc/auth/auth_event.dart';
 import 'package:iot_app/bloc/auth/auth_state.dart';
-import 'package:iot_app/repository/api_service.dart';
-import 'package:iot_app/repository/biometric_repository.dart';
-import 'package:iot_app/repository/user_repository.dart';
+import 'package:iot_app/core/services/api_service.dart';
+import 'package:iot_app/core/services/biometric_repository.dart';
+import 'package:iot_app/core/services/user_repository.dart';
 
 class AuthBloc extends Bloc<AuthEvent, AuthState> {
   final ApiService apiService;

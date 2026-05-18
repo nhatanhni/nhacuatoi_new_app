@@ -205,10 +205,10 @@ packages:
     dependency: "direct main"
     description:
       name: fl_chart
-      sha256: "74959b99b92b9eebeed1a4049426fd67c4abc3c5a0f4d12e2877097d6a11ae08"
+      sha256: b938f77d042cbcd822936a7a359a7235bad8bd72070de1f827efc2cc297ac888
       url: "https://pub.dev"
     source: hosted
-    version: "0.69.2"
+    version: "1.2.0"
   flutter:
     dependency: "direct main"
     description: flutter
@@ -800,6 +800,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.1.8"
+  plugin_wifi_connect:
+    dependency: "direct main"
+    description:
+      name: plugin_wifi_connect
+      sha256: "19d318dfe834e9904bae8328b4ff7b104f7de697dec6709a10f1e9c743e7cbc1"
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.0.1"
   posix:
     dependency: transitive
     description:

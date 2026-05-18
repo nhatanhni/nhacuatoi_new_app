@@ -1,8 +1,8 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:iot_app/bloc/organization/organization_event.dart';
 import 'package:iot_app/bloc/organization/organization_state.dart';
-import 'package:iot_app/models/organization_unit.dart';
-import 'package:iot_app/repository/api_service.dart';
+import 'package:iot_app/core/models/organization_unit.dart';
+import 'package:iot_app/core/services/api_service.dart';
 
 class OrganizationBloc extends Bloc<OrganizationEvent, OrganizationState> {
   final ApiService apiService;

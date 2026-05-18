@@ -1,7 +1,7 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:iot_app/bloc/scheduler/scheduler_event.dart';
 import 'package:iot_app/bloc/scheduler/scheduler_state.dart';
-import 'package:iot_app/repository/scheduler_repository.dart';
+import 'package:iot_app/core/services/scheduler_repository.dart';
 
 class SchedulerBloc extends Bloc<SchedulerEvent, SchedulerState> {
   final SchedulerRepository schedulerRepository;

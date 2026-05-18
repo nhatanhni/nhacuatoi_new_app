@@ -5,6 +5,11 @@
         <!-- Show a splash screen on the activity. Automatically removed when
              the Flutter engine draws its first frame -->
         <item name="android:windowBackground">@drawable/launch_background</item>
+
+        <!-- Android 12+ Splash Screen API -->
+        <item name="android:windowSplashScreenBackground">@color/primaryBlue</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@null</item>
+
         <!-- Android 15 edge-to-edge support -->
         <item name="android:windowTranslucentStatus">false</item>
         <item name="android:windowTranslucentNavigation">false</item>

@@ -6,7 +6,7 @@ import 'package:iot_app/bloc/station/station_bloc.dart';
 import 'package:iot_app/bloc/station/station_event.dart';
 import 'package:iot_app/bloc/station/station_state.dart';
 import 'package:iot_app/core/state/station_camera_preferences_provider.dart';
-import 'package:iot_app/models/station_from_api.dart';
+import 'package:iot_app/core/models/station_from_api.dart';
 import 'package:iot_app/widgets/drawer_widget.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:webview_flutter/webview_flutter.dart';
